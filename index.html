@@ -26,34 +26,36 @@
             box-shadow: 0 4px 15px rgba(0,0,0,0.5); font-size: 30px; border: 3px solid #007bff;
         }
 
-        #alert-container {
-            position: absolute; top: 15px; left: 50%; transform: translateX(-50%);
-            z-index: 2000; width: 90%; max-width: 400px; pointer-events: none;
+        /* Animazione Punto Rosso Lampeggiante */
+        .punto-archeo {
+            background: #ff0000;
+            border: 2px solid white;
+            border-radius: 50%;
+            box-shadow: 0 0 10px #ff0000;
+            animation: pulse 1.5s infinite;
         }
-        .alert-box {
-            padding: 12px; border-radius: 10px; text-align: center; 
-            font-weight: bold; color: white; display: none; margin-bottom: 5px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3); border: 2px solid white;
+        @keyframes pulse {
+            0% { transform: scale(0.8); opacity: 1; }
+            100% { transform: scale(1.5); opacity: 0; }
         }
-        #alert-archeo { background: #ff0000; }
-        #alert-parchi { background: #004cff; }
 
-        .detector-icon { transition: transform 0.1s linear; }
-        
-        /* Stile popup migliorato */
+        .alert-box {
+            position: absolute; top: 15px; left: 50%; transform: translateX(-50%);
+            z-index: 2000; padding: 12px; border-radius: 10px; text-align: center; 
+            font-weight: bold; color: white; display: none; border: 2px solid white;
+            background: #ff0000; box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+
         .popup-btn {
-            display: block; width: 100%; margin-top: 5px; padding: 8px;
+            display: block; width: 100%; margin-top: 5px; padding: 10px;
             border: none; border-radius: 4px; font-weight: bold; color: white;
-            cursor: pointer; text-decoration: none; text-align: center;
+            cursor: pointer; text-decoration: none; text-align: center; font-size: 12px;
         }
     </style>
 </head>
 <body>
 
-    <div id="alert-container">
-        <div id="alert-archeo" class="alert-box">⚠️ AREA ARCHEOLOGICA</div>
-        <div id="alert-parchi" class="alert-box">🌳 PARCO PROTETTO</div>
-    </div>
+    <div id="alert-archeo" class="alert-box">⚠️ AREA ARCHEOLOGICA RILEVATA</div>
 
     <div id="info-box">ZOOM: 11<br>DIST: 0 m</div>
     
@@ -68,28 +70,12 @@
 
         // LIVELLI
         var satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19 }).addTo(map);
-        var labels = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png', { subdomains: 'abcd' }).addTo(map);
-        
         var wmsLazio = 'https://geoportale.regione.lazio.it/geoserver/wms';
-        var areeArcheo = L.tileLayer.wms(wmsLazio, { layers: 'geonode:aree_archeologiche', format: 'image/png', transparent: true, opacity: 0.5 }).addTo(map);
-        var parchi = L.tileLayer.wms(wmsLazio, { layers: 'geonode:ps_amb_aree_protette', format: 'image/png', transparent: true, opacity: 0.5 }).addTo(map);
+        var areeArcheo = L.tileLayer.wms(wmsLazio, { layers: 'geonode:aree_archeologiche', format: 'image/png', transparent: true, opacity: 0.4 }).addTo(map);
 
-        L.control.layers(null, { "🏛️ Archeo": areeArcheo, "🔵 Parchi": parchi, "🏷️ Nomi": labels }, { collapsed: false }).addTo(map);
+        // --- FUNZIONE CLICK E PUNTO ROSSO ---
+        var tempMarker = null;
 
-        // --- DISEGNO E NAVIGAZIONE ---
-        map.pm.addControls({ position: 'topleft', drawMarker: true, drawPolyline: true, removalMode: true });
-        map.pm.setLang('it');
-
-        map.on('pm:create', function(e) {
-            var layer = e.layer;
-            if (layer instanceof L.Marker) {
-                var p = layer.getLatLng();
-                var btn = `<a href="https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lng}&travelmode=walking" target="_blank" class="popup-btn" style="background:#007bff;">🧭 VAI QUI</a>`;
-                layer.bindPopup("<b>Punto Segnato</b>" + btn).openPopup();
-            }
-        });
-
-        // --- FUNZIONE INFO STORICHE E FOTO ---
         map.on('click', function(e) {
             var size = map.getSize();
             var point = map.layerPointToContainerPoint(e.layerPoint);
@@ -101,25 +87,31 @@
                 if (data.features && data.features.length > 0) {
                     var props = data.features[0].properties;
                     var nome = props.nome_sito || "Sito Archeologico";
-                    var crono = props.cronologia || "Epoca non specificata";
                     
+                    // Rimuovi punto precedente se esiste
+                    if (tempMarker) map.removeLayer(tempMarker);
+
+                    // Crea il PUNTO ROSSO
+                    tempMarker = L.marker(e.latlng, {
+                        icon: L.divIcon({ className: 'punto-archeo', iconSize: [20, 20] })
+                    }).addTo(map);
+
                     var popupHtml = `
-                        <div style="min-width:180px">
-                            <b style="color:#d32f2f">🏛️ ${nome}</b><br>
-                            <small><b>Cronologia:</b> ${crono}</small><br>
+                        <div style="min-width:200px">
+                            <b style="color:red; font-size:16px;">📍 ${nome}</b><br>
                             <hr>
+                            <a href="https://www.google.com/maps/dir/?api=1&destination=${e.latlng.lat},${e.latlng.lng}&travelmode=walking" target="_blank" class="popup-btn" style="background:#007bff;">🧭 PORTAMI QUI</a>
                             <a href="https://www.google.com/search?tbm=isch&q=reperti+archeologici+${encodeURIComponent(nome)}" target="_blank" class="popup-btn" style="background:#f39c12;">🖼️ VEDI FOTO REPERTI</a>
-                            <a href="https://www.google.com/search?q=${encodeURIComponent(nome)}+storia+archeologia" target="_blank" class="popup-btn" style="background:#555;">📖 LEGGI STORIA</a>
+                            <a href="https://www.google.com/search?q=${encodeURIComponent(nome)}+storia" target="_blank" class="popup-btn" style="background:#333;">📖 LEGGI STORIA</a>
                         </div>
                     `;
-                    L.popup().setLatLng(e.latlng).setContent(popupHtml).openOn(map);
+                    tempMarker.bindPopup(popupHtml).openPopup();
                 }
             });
         });
 
         // --- GPS E ICONA DETECTOR ---
         var totalDist = 0, lastPos = null;
-        var trackLine = L.polyline([], {color: '#00ff00', weight: 4}).addTo(map);
         var userMarker, userCircle;
 
         var detectorIcon = L.divIcon({
@@ -129,8 +121,7 @@
         });
 
         function updateUI() {
-            var dLabel = totalDist > 1000 ? (totalDist/1000).toFixed(2) + " km" : Math.round(totalDist) + " m";
-            document.getElementById('info-box').innerHTML = "ZOOM: " + map.getZoom() + "<br>DIST: " + dLabel;
+            document.getElementById('info-box').innerHTML = "ZOOM: " + map.getZoom() + "<br>DIST: " + Math.round(totalDist) + " m";
         }
         map.on('zoomend', updateUI);
 
@@ -147,51 +138,28 @@
         }, true);
 
         map.on('locationfound', function(e) {
-            if (userMarker) {
-                userMarker.setLatLng(e.latlng);
-                userCircle.setLatLng(e.latlng).setRadius(e.accuracy / 2);
-                if (lastPos && e.accuracy < 25) {
-                    var d = lastPos.distanceTo(e.latlng);
-                    if (d > 4) { totalDist += d; trackLine.addLatLng(e.latlng); }
-                }
-            } else {
-                userCircle = L.circle(e.latlng, {radius: e.accuracy / 2, color: '#007bff', opacity: 0.2}).addTo(map);
+            if (!userMarker) {
+                userCircle = L.circle(e.latlng, {radius: 10, color: '#007bff', opacity: 0.2}).addTo(map);
                 userMarker = L.marker(e.latlng, {icon: detectorIcon}).addTo(map);
+            } else {
+                userMarker.setLatLng(e.latlng);
+                userCircle.setLatLng(e.latlng);
+                if (lastPos) totalDist += lastPos.distanceTo(e.latlng);
             }
             lastPos = e.latlng;
             updateUI();
-
-            if (window.alertOn) {
-                checkAlert(e.latlng, 'geonode:aree_archeologiche', 'alert-archeo');
-                checkAlert(e.latlng, 'geonode:ps_amb_aree_protette', 'alert-parchi');
-            }
+            
+            // Allerta automatica
+            checkAlert(e.latlng);
         });
 
-        function checkAlert(latlng, layer, elementId) {
+        function checkAlert(latlng) {
             var b = 0.0003; 
-            var url = wmsLazio + "?service=WMS&request=GetFeatureInfo&version=1.1.1&layers=" + layer + "&query_layers=" + layer + "&info_format=application/json&x=50&y=50&width=101&height=101&bbox=" + (latlng.lng-b)+","+(latlng.lat-b)+","+(latlng.lng+b)+","+(latlng.lat+b);
+            var url = wmsLazio + "?service=WMS&request=GetFeatureInfo&version=1.1.1&layers=geonode:aree_archeologiche&query_layers=geonode:aree_archeologiche&info_format=application/json&x=50&y=50&width=101&height=101&bbox=" + (latlng.lng-b)+","+(latlng.lat-b)+","+(latlng.lng+b)+","+(latlng.lat+b);
             fetch(url).then(r => r.json()).then(d => { 
-                document.getElementById(elementId).style.display = (d.features && d.features.length > 0) ? 'block' : 'none';
-            }).catch(e => {});
+                document.getElementById('alert-archeo').style.display = (d.features && d.features.length > 0) ? 'block' : 'none';
+            });
         }
-
-        window.alertOn = false;
-        var Gui = L.Control.extend({
-            options: { position: 'topright' },
-            onAdd: function() {
-                var c = L.DomUtil.create('div', 'leaflet-bar');
-                c.style.background = "white";
-                c.innerHTML = '<div id="tA" style="padding:12px; cursor:pointer; border-bottom:1px solid #ccc; color:red; font-weight:bold;">🔔 Allerta: OFF</div><div id="tR" style="padding:12px; cursor:pointer;">🧹 Reset</div>';
-                c.querySelector('#tA').onclick = function() { 
-                    window.alertOn = !window.alertOn; 
-                    this.innerHTML = window.alertOn ? "🔔 Allerta: ON" : "🔔 Allerta: OFF"; 
-                    this.style.color = window.alertOn ? "green" : "red";
-                };
-                c.querySelector('#tR').onclick = function() { totalDist = 0; trackLine.setLatLngs([]); updateUI(); };
-                return c;
-            }
-        });
-        map.addControl(new Gui());
     </script>
 </body>
 </html>
