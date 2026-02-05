@@ -3,19 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>ArcheoLazio PRO - PCN LiDAR</title>
+    <title>ArcheoLazio PRO - Fix Info</title>
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link rel="stylesheet" href="https://unpkg.com/@geoman-io/leaflet-geoman-free@latest/dist/leaflet-geoman.css" />
-    
     <style>
         body { margin: 0; padding: 0; background: #000; font-family: sans-serif; }
         #map { height: 100vh; width: 100%; }
         
+        /* Box Metri e Zoom - RIPRISTINATO */
         #info-box {
             position: absolute; bottom: 40px; left: 10px; z-index: 1000;
             background: rgba(0,0,0,0.85); color: #00ff00; padding: 10px;
-            border-radius: 5px; font-size: 13px; border: 1px solid #444; font-family: monospace;
+            border-radius: 5px; font-size: 14px; border: 1px solid #444; 
+            font-family: monospace; line-height: 1.5; pointer-events: none;
         }
 
         .gps-btn {
@@ -27,18 +27,16 @@
 
         #alert-container {
             position: absolute; top: 15px; left: 50%; transform: translateX(-50%);
-            z-index: 2000; width: 90%; max-width: 400px;
+            z-index: 2000; width: 90%; max-width: 400px; pointer-events: none;
         }
         .alert-box {
-            padding: 12px; border-radius: 10px; margin-bottom: 5px;
-            text-align: center; font-weight: bold; color: white; display: none;
+            padding: 12px; border-radius: 10px; text-align: center; 
+            font-weight: bold; color: white; display: none; margin-bottom: 5px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.3); border: 2px solid white;
         }
         #alert-archeo { background: #ff0000; }
         #alert-parchi { background: #004cff; }
-
-        /* Effetto per migliorare il LiDAR Ministeriale */
-        .pcn-lidar { filter: contrast(120%) brightness(110%); }
+        .user-arrow { transition: transform 0.1s linear; }
     </style>
 </head>
 <body>
@@ -49,53 +47,45 @@
     </div>
 
     <div id="info-box">ZOOM: 11<br>DIST: 0 m</div>
+    
     <div id="map"></div>
     <div class="gps-btn" onclick="trovaPosizione()">📍</div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://unpkg.com/@geoman-io/leaflet-geoman-free@latest/dist/leaflet-geoman.min.js"></script>
 
     <script>
         var map = L.map('map', { center: [41.9028, 12.4964], zoom: 11, zoomControl: false });
-        L.control.zoom({ position: 'topleft' }).addTo(map);
 
-        // 1. BASE SATELLITE
+        // LIVELLI
         var satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19 }).addTo(map);
-
-        // 2. LIDAR UFFICIALE MINISTERO (PCN)
-        // Usiamo il servizio WMS del Portale Cartografico Nazionale per il DTM (Modello Digitale del Terreno)
-        var lidarPCN = L.tileLayer.wms('http://wms.pcn.minambiente.it/ogc?map=/ms_ogc/WMS_v1.3/Rilievo_Nominativo/DTM_25m.map', {
-            layers: 'DTM_25M',
-            format: 'image/png',
-            transparent: true,
-            version: '1.3.0',
-            opacity: 0.7,
-            className: 'pcn-lidar',
-            attribution: 'Ministero dell Ambiente (PCN)'
-        });
-
-        // LiDAR Secondario (Backup Alta risoluzione)
-        var lidarGlobal = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { maxZoom: 17, opacity: 0.5 });
-
-        // 3. OVERLAYS
+        var lidarFast = L.tileLayer('https://tiles.stadiamaps.com/tiles/stamen_terrain_background/{z}/{x}/{y}{r}.png', { maxZoom: 18, opacity: 0.6 });
         var labels = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png', { subdomains: 'abcd' }).addTo(map);
+        
         var wmsLazio = 'https://geoportale.regione.lazio.it/geoserver/wms';
         var areeArcheo = L.tileLayer.wms(wmsLazio, { layers: 'geonode:aree_archeologiche', format: 'image/png', transparent: true, opacity: 0.5 }).addTo(map);
-        var parchi = L.tileLayer.wms(wmsLazio, { layers: 'geonode:ps_amb_aree_protette', format: 'image/png', transparent: true, opacity: 0.5 }).addTo(map);
+        var parchi = L.tileLayer.wms(wmsLazio, { layers: 'geonode:ps_amb_aree_protette', format: 'image/png', transparent: true, opacity: 0.5 });
 
-        var overlays = { 
+        L.control.layers(null, { 
+            "⛰️ LiDAR / Rilievo": lidarFast,
             "🏛️ Archeo (Rosso)": areeArcheo, 
             "🔵 Parchi (Blu)": parchi,
-            "⛰️ LiDAR PCN (Ministero)": lidarPCN,
-            "⛰️ LiDAR Global": lidarGlobal,
-            "🏷️ Nomi": labels
-        };
-        L.control.layers(null, overlays, { collapsed: false }).addTo(map);
+            "🏷️ Nomi": labels 
+        }, { collapsed: false }).addTo(map);
 
-        // --- GPS E ALLERTA ---
+        // VARIABILI GPS
         var totalDist = 0, lastPos = null;
         var trackLine = L.polyline([], {color: '#00ff00', weight: 4}).addTo(map);
         var userMarker, userCircle;
+
+        // FUNZIONE AGGIORNAMENTO TESTO
+        function updateUI() {
+            var zoom = map.getZoom();
+            var distLabel = totalDist > 1000 ? (totalDist/1000).toFixed(2) + " km" : Math.round(totalDist) + " m";
+            document.getElementById('info-box').innerHTML = "ZOOM: " + zoom + "<br>DIST: " + distLabel;
+        }
+
+        // Aggiorna quando usi lo zoom
+        map.on('zoomend', updateUI);
 
         function trovaPosizione() {
             map.locate({setView: true, maxZoom: 18, enableHighAccuracy: true, watch: true});
@@ -107,7 +97,10 @@
                 userCircle.setLatLng(e.latlng).setRadius(e.accuracy / 2);
                 if (lastPos && e.accuracy < 25) {
                     var d = lastPos.distanceTo(e.latlng);
-                    if (d > 3) { totalDist += d; trackLine.addLatLng(e.latlng); }
+                    if (d > 3) { 
+                        totalDist += d; 
+                        trackLine.addLatLng(e.latlng); 
+                    }
                 }
             } else {
                 userCircle = L.circle(e.latlng, {radius: e.accuracy / 2, color: '#007bff', opacity: 0.3}).addTo(map);
@@ -120,7 +113,7 @@
                 }).addTo(map);
             }
             lastPos = e.latlng;
-            document.getElementById('info-box').innerHTML = "ZOOM: " + map.getZoom() + "<br>DIST: " + (totalDist > 1000 ? (totalDist/1000).toFixed(2) + " km" : Math.round(totalDist) + " m");
+            updateUI(); // Aggiorna i metri nel box
 
             if (window.alertOn) {
                 checkAlert(e.latlng, 'geonode:aree_archeologiche', 'alert-archeo');
@@ -148,12 +141,11 @@
                     this.innerHTML = window.alertOn ? "🔔 Allerta: ON" : "🔔 Allerta: OFF"; 
                     this.style.color = window.alertOn ? "green" : "red";
                 };
-                c.querySelector('#tR').onclick = function() { totalDist = 0; trackLine.setLatLngs([]); };
+                c.querySelector('#tR').onclick = function() { totalDist = 0; trackLine.setLatLngs([]); updateUI(); };
                 return c;
             }
         });
         map.addControl(new Gui());
-        map.pm.addControls({ position: 'topleft', drawMarker: false });
     </script>
 </body>
 </html>
