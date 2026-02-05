@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>ArcheoLazio PRO - GPS & LiDAR</title>
+    <title>ArcheoLazio PRO - Geofencing Switch</title>
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="https://unpkg.com/@geoman-io/leaflet-geoman-free@latest/dist/leaflet-geoman.css" />
@@ -12,7 +12,6 @@
         body { margin: 0; padding: 0; background: #1a1a1a; font-family: sans-serif; }
         #map { height: 100vh; width: 100%; }
         
-        /* Bottone GPS circolare */
         .gps-btn {
             position: absolute; bottom: 30px; right: 20px; z-index: 1000;
             background: #fff; width: 60px; height: 60px; border-radius: 50%;
@@ -21,89 +20,46 @@
             border: 2px solid #007bff;
         }
 
-        /* Pannello controllo layer */
-        .leaflet-control-layers {
-            border-radius: 10px !important;
-            padding: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.3) !important;
+        #status {
+            position: absolute; top: 15px; left: 50%; transform: translateX(-50%);
+            z-index: 2000; background: rgba(0,0,0,0.8); color: white;
+            padding: 10px 20px; border-radius: 25px; font-size: 14px; 
+            text-align: center; min-width: 200px; transition: all 0.3s;
+            border: 1px solid rgba(255,255,255,0.2); pointer-events: none;
+            display: none; /* Nascosto di default */
         }
 
-        /* Barra di stato caricamento */
-        #status {
-            position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
-            z-index: 2000; background: rgba(0,0,0,0.8); color: white;
-            padding: 8px 18px; border-radius: 20px; font-size: 12px; display: none;
-            pointer-events: none;
-        }
+        .alert-active { background: #d9534f !important; color: white !important; font-weight: bold; box-shadow: 0 0 15px red; }
+        
+        /* Stile per l'interruttore nel menu */
+        .allerta-control { padding: 5px; font-weight: bold; color: #d9534f; }
     </style>
 </head>
 <body>
 
-    <div id="status">Caricamento dati regionali...</div>
+    <div id="status">Sistema di allerta attivo...</div>
     <div id="map"></div>
-    <div class="gps-btn" onclick="trovaPosizione()" title="Trova la mia posizione">📍</div>
+    <div class="gps-btn" onclick="trovaPosizione()">📍</div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://unpkg.com/@geoman-io/leaflet-geoman-free@latest/dist/leaflet-geoman.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/leaflet-geometryutil@0.10.3/src/leaflet.geometryutil.min.js"></script>
 
     <script>
-        // 1. Configurazione Mappa iniziale
-        var map = L.map('map', { 
-            center: [41.9028, 12.4964], 
-            zoom: 11, 
-            zoomControl: false 
-        });
+        var map = L.map('map', { center: [41.9028, 12.4964], zoom: 11, zoomControl: false });
         L.control.zoom({ position: 'topleft' }).addTo(map);
 
-        // 2. Sfondi (Base Maps)
-        var satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-            attribution: 'Esri Satellite'
-        }).addTo(map);
+        var satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: 'Esri' }).addTo(map);
+        var labels = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png', { subdomains: 'abcd' }).addTo(map);
 
-        var labels = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png', {
-            subdomains: 'abcd'
-        }).addTo(map);
-
-        // 3. Definizione Layer WMS Regione Lazio
         var wmsUrl = 'https://geoportale.regione.lazio.it/geoserver/wms';
+        var areeArcheo = L.tileLayer.wms(wmsUrl, { layers: 'geonode:aree_archeologiche', format: 'image/png', transparent: true, opacity: 0.5 }).addTo(map);
+        var archeoLineare = L.tileLayer.wms(wmsUrl, { layers: 'geonode:ptpr_tavc_archeo_lineare', format: 'image/png', transparent: true, opacity: 0.8 }).addTo(map);
+        var lidar = L.tileLayer.wms(wmsUrl, { layers: 'dtm_20m_ombreggiato', format: 'image/png', transparent: true, opacity: 0.6, version: '1.3.0' });
+        var parchi = L.tileLayer.wms(wmsUrl, { layers: 'geonode:aree_protette_regionali', format: 'image/png', transparent: true, opacity: 0.4 });
 
-        // PTPR Tavola B - Aree Archeologiche
-        var areeArcheo = L.tileLayer.wms(wmsUrl, {
-            layers: 'geonode:aree_archeologiche',
-            format: 'image/png',
-            transparent: true,
-            opacity: 0.5
-        }).addTo(map);
-
-        // PTPR Tavola C - Beni Archeologici Lineari
-        var archeoLineare = L.tileLayer.wms(wmsUrl, {
-            layers: 'geonode:ptpr_tavc_archeo_lineare',
-            format: 'image/png',
-            transparent: true,
-            opacity: 0.8
-        }).addTo(map);
-
-        // LiDAR / DTM - Rilievo del terreno
-        var lidar = L.tileLayer.wms(wmsUrl, {
-            layers: 'dtm_20m_ombreggiato',
-            format: 'image/png',
-            transparent: true,
-            opacity: 0.6,
-            version: '1.3.0'
-        });
-
-        // Parchi e Aree Protette
-        var parchi = L.tileLayer.wms(wmsUrl, {
-            layers: 'geonode:aree_protette_regionali',
-            format: 'image/png',
-            transparent: true,
-            opacity: 0.4
-        });
-
-        // 4. Menu dei Livelli
         var overlayMaps = {
-            "🏷️ Nomi e Strade": labels,
+            "🏷️ Nomi Strade": labels,
             "🏛️ Tavola B (Aree)": areeArcheo,
             "➖ Tavola C (Linee)": archeoLineare,
             "⛰️ LiDAR (Rilievo)": lidar,
@@ -111,52 +67,81 @@
         };
         L.control.layers(null, overlayMaps, { collapsed: false }).addTo(map);
 
-        // 5. Strumenti di Misura (Righello)
-        map.pm.addControls({
-            position: 'topleft',
-            drawMarker: false,
-            drawPolyline: true, // Misura distanze
-            drawPolygon: true,  // Misura aree
-            removalMode: true
+        // --- GESTIONE INTERRUTTORE ALLERTA ---
+        var allertaAttiva = false; // Spento di default
+        
+        // Aggiungiamo un controllo manuale nel menu
+        var customControl = L.Control.extend({
+            options: { position: 'topright' },
+            onAdd: function (map) {
+                var container = L.DomUtil.create('div', 'leaflet-bar leaflet-control leaflet-control-custom');
+                container.innerHTML = '<div style="background:white; padding:5px; border-radius:5px; cursor:pointer;" id="toggleAllerta">🔔 Allerta: OFF</div>';
+                container.onclick = function(){
+                    allertaAttiva = !allertaAttiva;
+                    if(allertaAttiva) {
+                        document.getElementById('toggleAllerta').innerHTML = "🔔 Allerta: ON";
+                        document.getElementById('toggleAllerta').style.color = "green";
+                        document.getElementById('status').style.display = "block";
+                        document.getElementById('status').innerHTML = "Allerta Attivata";
+                    } else {
+                        document.getElementById('toggleAllerta').innerHTML = "🔔 Allerta: OFF";
+                        document.getElementById('toggleAllerta').style.color = "#d9534f";
+                        document.getElementById('status').style.display = "none";
+                        document.getElementById('status').className = "";
+                    }
+                }
+                return container;
+            }
         });
+        map.addControl(new customControl());
+
+        // --- STRUMENTI DI MISURA ---
+        map.pm.addControls({ position: 'topleft', drawMarker: false, drawPolyline: true, drawPolygon: true, removalMode: true });
         map.pm.setLang('it');
 
-        // Calcolo distanze e aree al termine del disegno
-        map.on('pm:create', function(e) {
-            var layer = e.layer;
-            if (layer instanceof L.Polyline && !(layer instanceof L.Polygon)) {
-                var d = 0;
-                var ll = layer.getLatLngs();
-                for (var i = 0; i < ll.length - 1; i++) { d += ll[i].distanceTo(ll[i+1]); }
-                layer.bindPopup("Distanza: " + (d).toFixed(2) + " metri").openPopup();
-            }
-            if (layer instanceof L.Polygon) {
-                var area = L.GeometryUtil.geodesicArea(layer.getLatLngs()[0]);
-                layer.bindPopup("Area: " + (area / 10000).toFixed(2) + " ettari").openPopup();
-            }
-        });
+        // --- FUNZIONE GEOFENCING ---
+        function controllaArea(latlng) {
+            if (!allertaAttiva) return; // Se l'allerta è spenta, esce subito
 
-        // 6. Funzione GPS
+            var statusDiv = document.getElementById('status');
+            var infoUrl = wmsUrl + L.Util.getParamString({
+                service: 'WMS', version: '1.1.1', request: 'GetFeatureInfo',
+                layers: 'geonode:aree_archeologiche,geonode:aree_protette_regionali',
+                query_layers: 'geonode:aree_archeologiche,geonode:aree_protette_regionali',
+                info_format: 'application/json', format: 'image/png',
+                bbox: map.getBounds().toBBoxString(), width: map.getSize().x, height: map.getSize().y,
+                x: Math.round(map.latLngToContainerPoint(latlng).x), y: Math.round(map.latLngToContainerPoint(latlng).y)
+            }, wmsUrl);
+
+            fetch(infoUrl).then(r => r.json()).then(data => {
+                if (data.features && data.features.length > 0) {
+                    var info = data.features[0].properties;
+                    var nome = info.nome || info.des_bene || "ZONA VINCOLATA";
+                    statusDiv.innerHTML = "⚠️ SEI DENTRO: " + nome.toUpperCase();
+                    statusDiv.className = "alert-active";
+                    if (navigator.vibrate) navigator.vibrate(500);
+                } else {
+                    statusDiv.innerHTML = "Zona libera";
+                    statusDiv.className = "";
+                }
+            }).catch(e => { console.log("Errore interrogazione server"); });
+        }
+
+        // --- GPS ---
         var markerUser, circleUser;
-
         function trovaPosizione() {
-            map.locate({setView: true, maxZoom: 17, enableHighAccuracy: true});
+            map.locate({setView: true, maxZoom: 17, enableHighAccuracy: true, watch: true});
         }
 
         map.on('locationfound', function(e) {
             if (markerUser) { map.removeLayer(markerUser); map.removeLayer(circleUser); }
-            markerUser = L.marker(e.latlng).addTo(map).bindPopup("Sei qui").openPopup();
-            circleUser = L.circle(e.latlng, e.accuracy / 2, { color: '#007bff' }).addTo(map);
+            markerUser = L.marker(e.latlng).addTo(map);
+            circleUser = L.circle(e.latlng, e.accuracy / 2, {color: '#007bff'}).addTo(map);
+            
+            if (allertaAttiva) controllaArea(e.latlng);
         });
 
-        map.on('locationerror', function(e) {
-            alert("Errore GPS: " + e.message + ". Assicurati di usare HTTPS su GitHub!");
-        });
-
-        // Gestione indicatore caricamento
-        map.on('dataloading', function() { document.getElementById('status').style.display = 'block'; });
-        map.on('dataload', function() { document.getElementById('status').style.display = 'none'; });
-
+        map.on('locationerror', function() { alert("Attiva GPS e usa HTTPS su GitHub!"); });
     </script>
 </body>
 </html>
