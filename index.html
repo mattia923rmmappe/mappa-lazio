@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>ArcheoLazio PRO - Final Nav</title>
+    <title>ArcheoLazio Interactive PRO</title>
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="https://unpkg.com/@geoman-io/leaflet-geoman-free@latest/dist/leaflet-geoman.css" />
@@ -12,7 +12,6 @@
         body { margin: 0; padding: 0; background: #000; font-family: sans-serif; overflow: hidden; }
         #map { height: 100vh; width: 100%; }
         
-        /* Box Informazioni (Zoom e Distanza) */
         #info-box {
             position: absolute; bottom: 40px; left: 10px; z-index: 1000;
             background: rgba(0,0,0,0.85); color: #00ff00; padding: 12px;
@@ -20,7 +19,6 @@
             font-family: 'Courier New', monospace; pointer-events: none;
         }
 
-        /* Pulsante GPS */
         .gps-btn {
             position: absolute; bottom: 35px; right: 20px; z-index: 1000;
             background: white; width: 65px; height: 65px; border-radius: 50%;
@@ -28,7 +26,6 @@
             box-shadow: 0 4px 15px rgba(0,0,0,0.5); font-size: 30px; border: 3px solid #007bff;
         }
 
-        /* Box Allerta */
         #alert-container {
             position: absolute; top: 15px; left: 50%; transform: translateX(-50%);
             z-index: 2000; width: 90%; max-width: 400px; pointer-events: none;
@@ -41,14 +38,13 @@
         #alert-archeo { background: #ff0000; }
         #alert-parchi { background: #004cff; }
 
-        /* Icona Metal Detector */
         .detector-icon { transition: transform 0.1s linear; }
         
-        /* Stile Popup Navigatore */
-        .leaflet-popup-content button {
-            margin-top: 10px;
-            font-family: sans-serif;
-            text-transform: uppercase;
+        /* Stile popup migliorato */
+        .popup-btn {
+            display: block; width: 100%; margin-top: 5px; padding: 8px;
+            border: none; border-radius: 4px; font-weight: bold; color: white;
+            cursor: pointer; text-decoration: none; text-align: center;
         }
     </style>
 </head>
@@ -68,7 +64,6 @@
     <script src="https://unpkg.com/@geoman-io/leaflet-geoman-free@latest/dist/leaflet-geoman.min.js"></script>
 
     <script>
-        // 1. INIZIALIZZAZIONE MAPPA
         var map = L.map('map', { center: [41.9028, 12.4964], zoom: 11, zoomControl: false });
 
         // LIVELLI
@@ -79,68 +74,58 @@
         var areeArcheo = L.tileLayer.wms(wmsLazio, { layers: 'geonode:aree_archeologiche', format: 'image/png', transparent: true, opacity: 0.5 }).addTo(map);
         var parchi = L.tileLayer.wms(wmsLazio, { layers: 'geonode:ps_amb_aree_protette', format: 'image/png', transparent: true, opacity: 0.5 }).addTo(map);
 
-        L.control.layers(null, { 
-            "🏛️ Aree Archeo": areeArcheo, 
-            "🔵 Parchi": parchi, 
-            "🏷️ Nomi Vie": labels 
-        }, { collapsed: false }).addTo(map);
+        L.control.layers(null, { "🏛️ Archeo": areeArcheo, "🔵 Parchi": parchi, "🏷️ Nomi": labels }, { collapsed: false }).addTo(map);
 
-        // 2. STRUMENTI DI DISEGNO E NAVIGAZIONE
-        map.pm.addControls({
-            position: 'topleft',
-            drawMarker: true,
-            drawPolyline: true,
-            removalMode: true,
-            editMode: true
-        });
+        // --- DISEGNO E NAVIGAZIONE ---
+        map.pm.addControls({ position: 'topleft', drawMarker: true, drawPolyline: true, removalMode: true });
         map.pm.setLang('it');
 
         map.on('pm:create', function(e) {
             var layer = e.layer;
-            var lat, lng;
-
             if (layer instanceof L.Marker) {
-                lat = layer.getLatLng().lat;
-                lng = layer.getLatLng().lng;
-                var btn = `<button onclick="window.open('https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=walking')" 
-                           style="background:#007bff; color:white; border:none; padding:10px; border-radius:5px; width:100%; font-weight:bold; cursor:pointer;">
-                           🧭 PORTAMI QUI
-                           </button>`;
-                layer.bindPopup("<b>Punto Segnato</b><br>" + btn).openPopup();
-            }
-
-            if (layer instanceof L.Polyline && !(layer instanceof L.Polygon)) {
-                var pts = layer.getLatLngs();
-                var d = 0;
-                for (var i=0; i < pts.length-1; i++) d += pts[i].distanceTo(pts[i+1]);
-                var last = pts[pts.length-1];
-                var btnLine = `<button onclick="window.open('https://www.google.com/maps/dir/?api=1&destination=${last.lat},${last.lng}&travelmode=walking')" 
-                               style="background:#28a745; color:white; border:none; padding:10px; border-radius:5px; width:100%; font-weight:bold; cursor:pointer;">
-                               🚶 VAI A FINE LINEA
-                               </button>`;
-                layer.bindPopup("<b>Lunghezza: " + Math.round(d) + "m</b><br>" + btnLine).openPopup();
+                var p = layer.getLatLng();
+                var btn = `<a href="https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lng}&travelmode=walking" target="_blank" class="popup-btn" style="background:#007bff;">🧭 VAI QUI</a>`;
+                layer.bindPopup("<b>Punto Segnato</b>" + btn).openPopup();
             }
         });
 
-        // 3. GPS E ICONA METAL DETECTOR
+        // --- FUNZIONE INFO STORICHE E FOTO ---
+        map.on('click', function(e) {
+            var size = map.getSize();
+            var point = map.layerPointToContainerPoint(e.layerPoint);
+            var bbox = map.getBounds().toBBoxString();
+
+            var url = wmsLazio + "?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetFeatureInfo&LAYERS=geonode:aree_archeologiche&QUERY_LAYERS=geonode:aree_archeologiche&INFO_FORMAT=application/json&X=" + Math.round(point.x) + "&Y=" + Math.round(point.y) + "&WIDTH=" + size.x + "&HEIGHT=" + size.y + "&BBOX=" + bbox;
+
+            fetch(url).then(res => res.json()).then(data => {
+                if (data.features && data.features.length > 0) {
+                    var props = data.features[0].properties;
+                    var nome = props.nome_sito || "Sito Archeologico";
+                    var crono = props.cronologia || "Epoca non specificata";
+                    
+                    var popupHtml = `
+                        <div style="min-width:180px">
+                            <b style="color:#d32f2f">🏛️ ${nome}</b><br>
+                            <small><b>Cronologia:</b> ${crono}</small><br>
+                            <hr>
+                            <a href="https://www.google.com/search?tbm=isch&q=reperti+archeologici+${encodeURIComponent(nome)}" target="_blank" class="popup-btn" style="background:#f39c12;">🖼️ VEDI FOTO REPERTI</a>
+                            <a href="https://www.google.com/search?q=${encodeURIComponent(nome)}+storia+archeologia" target="_blank" class="popup-btn" style="background:#555;">📖 LEGGI STORIA</a>
+                        </div>
+                    `;
+                    L.popup().setLatLng(e.latlng).setContent(popupHtml).openOn(map);
+                }
+            });
+        });
+
+        // --- GPS E ICONA DETECTOR ---
         var totalDist = 0, lastPos = null;
         var trackLine = L.polyline([], {color: '#00ff00', weight: 4}).addTo(map);
         var userMarker, userCircle;
 
-        var detectorSvg = `
-            <svg width="40" height="40" viewBox="0 0 100 100">
-                <circle cx="50" cy="50" r="40" stroke="#fbff00" stroke-width="6" fill="rgba(251, 255, 0, 0.2)" />
-                <line x1="50" y1="10" x2="50" y2="90" stroke="#fbff00" stroke-width="4" />
-                <line x1="10" y1="50" x2="90" y2="50" stroke="#fbff00" stroke-width="4" />
-                <circle cx="50" cy="50" r="5" fill="#fbff00" />
-                <path d="M50 5 L60 20 L40 20 Z" fill="#fbff00" /> 
-            </svg>`;
-
         var detectorIcon = L.divIcon({
             className: 'detector-icon',
-            html: detectorSvg,
-            iconSize: [40, 40],
-            iconAnchor: [20, 20]
+            html: `<svg width="40" height="40" viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" stroke="#fbff00" stroke-width="6" fill="rgba(251, 255, 0, 0.2)" /><line x1="50" y1="10" x2="50" y2="90" stroke="#fbff00" stroke-width="4" /><line x1="10" y1="50" x2="90" y2="50" stroke="#fbff00" stroke-width="4" /><circle cx="50" cy="50" r="5" fill="#fbff00" /><path d="M50 5 L60 20 L40 20 Z" fill="#fbff00" /></svg>`,
+            iconSize: [40, 40], iconAnchor: [20, 20]
         });
 
         function updateUI() {
@@ -190,14 +175,13 @@
             }).catch(e => {});
         }
 
-        // 4. MENU DI CONTROLLO
         window.alertOn = false;
         var Gui = L.Control.extend({
             options: { position: 'topright' },
             onAdd: function() {
                 var c = L.DomUtil.create('div', 'leaflet-bar');
                 c.style.background = "white";
-                c.innerHTML = '<div id="tA" style="padding:12px; cursor:pointer; border-bottom:1px solid #ccc; color:red; font-weight:bold;">🔔 Allerta: OFF</div><div id="tR" style="padding:12px; cursor:pointer;">🧹 Reset Traccia</div>';
+                c.innerHTML = '<div id="tA" style="padding:12px; cursor:pointer; border-bottom:1px solid #ccc; color:red; font-weight:bold;">🔔 Allerta: OFF</div><div id="tR" style="padding:12px; cursor:pointer;">🧹 Reset</div>';
                 c.querySelector('#tA').onclick = function() { 
                     window.alertOn = !window.alertOn; 
                     this.innerHTML = window.alertOn ? "🔔 Allerta: ON" : "🔔 Allerta: OFF"; 
