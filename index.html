@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>ArcheoLazio Interactive PRO</title>
+    <title>ArcheoLazio Ultra</title>
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="https://unpkg.com/@geoman-io/leaflet-geoman-free@latest/dist/leaflet-geoman.css" />
@@ -12,52 +12,77 @@
         body { margin: 0; padding: 0; background: #000; font-family: sans-serif; overflow: hidden; }
         #map { height: 100vh; width: 100%; }
         
+        /* Box Info Metri/Zoom */
         #info-box {
-            position: absolute; bottom: 40px; left: 10px; z-index: 1000;
-            background: rgba(0,0,0,0.85); color: #00ff00; padding: 12px;
-            border-radius: 8px; font-size: 14px; border: 1px solid #00ff00;
+            position: absolute; bottom: 30px; left: 10px; z-index: 1000;
+            background: rgba(0,0,0,0.85); color: #00ff00; padding: 10px;
+            border-radius: 8px; font-size: 13px; border: 1px solid #00ff00;
             font-family: 'Courier New', monospace; pointer-events: none;
         }
 
-        .gps-btn {
-            position: absolute; bottom: 35px; right: 20px; z-index: 1000;
-            background: white; width: 65px; height: 65px; border-radius: 50%;
-            display: flex; align-items: center; justify-content: center;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5); font-size: 30px; border: 3px solid #007bff;
+        /* Pannello di Controllo Alto Destra */
+        .control-panel {
+            position: absolute; top: 10px; right: 10px; z-index: 2000;
+            background: white; padding: 5px; border-radius: 8px; border: 2px solid #333;
         }
+        .control-item {
+            padding: 8px 12px; border-bottom: 1px solid #ddd; cursor: pointer;
+            font-weight: bold; font-size: 12px; display: flex; align-items: center; justify-content: space-between;
+        }
+        .control-item:last-child { border-bottom: none; }
 
-        /* Animazione Punto Rosso Lampeggiante */
-        .punto-archeo {
-            background: #ff0000;
-            border: 2px solid white;
-            border-radius: 50%;
-            box-shadow: 0 0 10px #ff0000;
-            animation: pulse 1.5s infinite;
-        }
-        @keyframes pulse {
-            0% { transform: scale(0.8); opacity: 1; }
-            100% { transform: scale(1.5); opacity: 0; }
-        }
-
-        .alert-box {
-            position: absolute; top: 15px; left: 50%; transform: translateX(-50%);
-            z-index: 2000; padding: 12px; border-radius: 10px; text-align: center; 
+        /* Banner Allerta */
+        #alert-banner {
+            position: absolute; top: 160px; left: 50%; transform: translateX(-50%);
+            z-index: 1900; padding: 10px 20px; border-radius: 10px; text-align: center; 
             font-weight: bold; color: white; display: none; border: 2px solid white;
-            background: #ff0000; box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            background: #ff0000; box-shadow: 0 4px 15px rgba(0,0,0,0.5);
         }
+
+        /* Pulsante GPS */
+        .gps-btn {
+            position: absolute; bottom: 30px; right: 20px; z-index: 1000;
+            background: white; width: 60px; height: 60px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5); font-size: 28px; border: 3px solid #007bff;
+        }
+
+        /* Targhetta "APRI" */
+        .targhetta-arc {
+            background: #ff0000; color: white; padding: 5px 10px; border-radius: 20px;
+            font-weight: bold; font-size: 10px; border: 2px solid white;
+            animation: bounce 0.8s infinite alternate;
+        }
+        @keyframes bounce { from { transform: translateY(0); } to { transform: translateY(-5px); } }
 
         .popup-btn {
-            display: block; width: 100%; margin-top: 5px; padding: 10px;
+            display: block; width: 100%; margin-top: 6px; padding: 8px;
             border: none; border-radius: 4px; font-weight: bold; color: white;
-            cursor: pointer; text-decoration: none; text-align: center; font-size: 12px;
+            text-decoration: none; text-align: center; font-size: 11px;
         }
+        
+        .detector-icon { transition: transform 0.1s linear; }
     </style>
 </head>
 <body>
 
-    <div id="alert-archeo" class="alert-box">⚠️ AREA ARCHEOLOGICA RILEVATA</div>
-
+    <div id="alert-banner">⚠️ ATTENZIONE: AREA VINCOLATA</div>
     <div id="info-box">ZOOM: 11<br>DIST: 0 m</div>
+
+    <div class="control-panel">
+        <div class="control-item" onclick="toggleLayer('archeo')" id="btn-archeo" style="color: red;">
+            🏛️ Aree Archeo: <span id="status-archeo">ON</span>
+        </div>
+        <div class="control-item" onclick="toggleLayer('parchi')" id="btn-parchi" style="color: blue;">
+            🌳 Parchi: <span id="status-parchi">ON</span>
+        </div>
+        <div class="control-item" onclick="toggleAlert()" id="btn-alert" style="color: orange;">
+            🔔 Allerta GPS: <span id="status-alert">OFF</span>
+        </div>
+        <div class="control-item" onclick="resetAll()" style="color: #333;">
+            🧹 Reset Mappa
+        </div>
+    </div>
     
     <div id="map"></div>
     <div class="gps-btn" onclick="trovaPosizione()">📍</div>
@@ -68,56 +93,100 @@
     <script>
         var map = L.map('map', { center: [41.9028, 12.4964], zoom: 11, zoomControl: false });
 
-        // LIVELLI
+        // LIVELLI MAPPA
         var satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19 }).addTo(map);
+        var labels = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png').addTo(map);
+        
         var wmsLazio = 'https://geoportale.regione.lazio.it/geoserver/wms';
-        var areeArcheo = L.tileLayer.wms(wmsLazio, { layers: 'geonode:aree_archeologiche', format: 'image/png', transparent: true, opacity: 0.4 }).addTo(map);
+        var layerArcheo = L.tileLayer.wms(wmsLazio, { layers: 'geonode:aree_archeologiche', format: 'image/png', transparent: true, opacity: 0.5 }).addTo(map);
+        var layerParchi = L.tileLayer.wms(wmsLazio, { layers: 'geonode:ps_amb_aree_protette', format: 'image/png', transparent: true, opacity: 0.5 }).addTo(map);
 
-        // --- FUNZIONE CLICK E PUNTO ROSSO ---
-        var tempMarker = null;
+        // STRUMENTI DISEGNO (Geoman)
+        map.pm.addControls({ position: 'topleft', drawMarker: true, drawPolyline: true, removalMode: true });
+        map.pm.setLang('it');
 
+        // GESTIONE LIVELLI E ALLERTA
+        var isArcheoOn = true, isParchiOn = true, isAlertOn = false;
+
+        function toggleLayer(type) {
+            if(type === 'archeo') {
+                isArcheoOn ? map.removeLayer(layerArcheo) : map.addLayer(layerArcheo);
+                isArcheoOn = !isArcheoOn;
+                document.getElementById('status-archeo').innerText = isArcheoOn ? "ON" : "OFF";
+            } else {
+                isParchiOn ? map.removeLayer(layerParchi) : map.addLayer(layerParchi);
+                isParchiOn = !isParchiOn;
+                document.getElementById('status-parchi').innerText = isParchiOn ? "ON" : "OFF";
+            }
+        }
+
+        function toggleAlert() {
+            isAlertOn = !isAlertOn;
+            document.getElementById('status-alert').innerText = isAlertOn ? "ON" : "OFF";
+            if(!isAlertOn) document.getElementById('alert-banner').style.display = 'none';
+        }
+
+        function resetAll() {
+            totalDist = 0; trackLine.setLatLngs([]);
+            if(currentTag) map.removeLayer(currentTag);
+            updateUI();
+        }
+
+        // CLICCA PER INFO E FOTO
+        var currentTag = null;
         map.on('click', function(e) {
+            if(!isArcheoOn) return;
             var size = map.getSize();
             var point = map.layerPointToContainerPoint(e.layerPoint);
             var bbox = map.getBounds().toBBoxString();
-
             var url = wmsLazio + "?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetFeatureInfo&LAYERS=geonode:aree_archeologiche&QUERY_LAYERS=geonode:aree_archeologiche&INFO_FORMAT=application/json&X=" + Math.round(point.x) + "&Y=" + Math.round(point.y) + "&WIDTH=" + size.x + "&HEIGHT=" + size.y + "&BBOX=" + bbox;
 
             fetch(url).then(res => res.json()).then(data => {
                 if (data.features && data.features.length > 0) {
-                    var props = data.features[0].properties;
-                    var nome = props.nome_sito || "Sito Archeologico";
-                    
-                    // Rimuovi punto precedente se esiste
-                    if (tempMarker) map.removeLayer(tempMarker);
-
-                    // Crea il PUNTO ROSSO
-                    tempMarker = L.marker(e.latlng, {
-                        icon: L.divIcon({ className: 'punto-archeo', iconSize: [20, 20] })
+                    var nome = data.features[0].properties.nome_sito || "SITO ARCHEOLOGICO";
+                    if (currentTag) map.removeLayer(currentTag);
+                    currentTag = L.marker(e.latlng, {
+                        icon: L.divIcon({ className: 'custom-icon', html: `<div class="targhetta-arc">⚠️ ZONA ARC - APRI</div>`, iconAnchor: [50, 10] })
                     }).addTo(map);
-
-                    var popupHtml = `
-                        <div style="min-width:200px">
-                            <b style="color:red; font-size:16px;">📍 ${nome}</b><br>
-                            <hr>
-                            <a href="https://www.google.com/maps/dir/?api=1&destination=${e.latlng.lat},${e.latlng.lng}&travelmode=walking" target="_blank" class="popup-btn" style="background:#007bff;">🧭 PORTAMI QUI</a>
-                            <a href="https://www.google.com/search?tbm=isch&q=reperti+archeologici+${encodeURIComponent(nome)}" target="_blank" class="popup-btn" style="background:#f39c12;">🖼️ VEDI FOTO REPERTI</a>
-                            <a href="https://www.google.com/search?q=${encodeURIComponent(nome)}+storia" target="_blank" class="popup-btn" style="background:#333;">📖 LEGGI STORIA</a>
-                        </div>
-                    `;
-                    tempMarker.bindPopup(popupHtml).openPopup();
+                    
+                    var pop = `<div style="min-width:180px"><b>🏛️ ${nome}</b><hr>
+                        <a href="https://www.google.com/maps/dir/?api=1&destination=${e.latlng.lat},${e.latlng.lng}&travelmode=walking" target="_blank" class="popup-btn" style="background:#007bff;">🧭 NAVIGA QUI</a>
+                        <a href="https://www.google.com/search?tbm=isch&q=reperti+${encodeURIComponent(nome)}" target="_blank" class="popup-btn" style="background:#f39c12;">🖼️ VEDI FOTO</a>
+                        <a href="https://www.google.com/search?q=${encodeURIComponent(nome)}+storia" target="_blank" class="popup-btn" style="background:#333;">📖 INFO ALLEGATI</a></div>`;
+                    currentTag.bindPopup(pop).openPopup();
                 }
             });
         });
 
-        // --- GPS E ICONA DETECTOR ---
-        var totalDist = 0, lastPos = null;
-        var userMarker, userCircle;
+        // GPS, DETECTOR E METRI
+        var totalDist = 0, lastPos = null, userMarker, userCircle;
+        var trackLine = L.polyline([], {color: '#00ff00', weight: 3}).addTo(map);
 
         var detectorIcon = L.divIcon({
             className: 'detector-icon',
-            html: `<svg width="40" height="40" viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" stroke="#fbff00" stroke-width="6" fill="rgba(251, 255, 0, 0.2)" /><line x1="50" y1="10" x2="50" y2="90" stroke="#fbff00" stroke-width="4" /><line x1="10" y1="50" x2="90" y2="50" stroke="#fbff00" stroke-width="4" /><circle cx="50" cy="50" r="5" fill="#fbff00" /><path d="M50 5 L60 20 L40 20 Z" fill="#fbff00" /></svg>`,
+            html: `<svg width="40" height="40" viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" stroke="#fbff00" stroke-width="6" fill="rgba(251, 255, 0, 0.2)" /><line x1="50" y1="10" x2="50" y2="90" stroke="#fbff00" stroke-width="4" /><line x1="10" y1="50" x2="90" y2="50" stroke="#fbff00" stroke-width="4" /><path d="M50 5 L60 20 L40 20 Z" fill="#fbff00" /></svg>`,
             iconSize: [40, 40], iconAnchor: [20, 20]
+        });
+
+        function trovaPosizione() {
+            map.locate({setView: true, maxZoom: 18, enableHighAccuracy: true, watch: true});
+        }
+
+        map.on('locationfound', function(e) {
+            if (!userMarker) {
+                userMarker = L.marker(e.latlng, {icon: detectorIcon}).addTo(map);
+                userCircle = L.circle(e.latlng, {radius: e.accuracy/2, color: '#007bff', opacity: 0.2}).addTo(map);
+            } else {
+                userMarker.setLatLng(e.latlng);
+                userCircle.setLatLng(e.latlng).setRadius(e.accuracy/2);
+                if (lastPos) {
+                    var d = lastPos.distanceTo(e.latlng);
+                    if (d > 4) { totalDist += d; trackLine.addLatLng(e.latlng); }
+                }
+            }
+            lastPos = e.latlng;
+            updateUI();
+            if(isAlertOn) checkAlert(e.latlng);
         });
 
         function updateUI() {
@@ -125,41 +194,21 @@
         }
         map.on('zoomend', updateUI);
 
-        function trovaPosizione() {
-            map.locate({setView: true, maxZoom: 18, enableHighAccuracy: true, watch: true});
+        function checkAlert(latlng) {
+            var b = 0.0003; 
+            var url = wmsLazio + "?service=WMS&request=GetFeatureInfo&layers=geonode:aree_archeologiche,geonode:ps_amb_aree_protette&query_layers=geonode:aree_archeologiche,geonode:ps_amb_aree_protette&info_format=application/json&x=50&y=50&width=101&height=101&bbox=" + (latlng.lng-b)+","+(latlng.lat-b)+","+(latlng.lng+b)+","+(latlng.lat+b);
+            fetch(url).then(r => r.json()).then(d => { 
+                document.getElementById('alert-banner').style.display = (d.features && d.features.length > 0) ? 'block' : 'none';
+            });
         }
 
         window.addEventListener('deviceorientationabsolute', function(e) {
             var alpha = e.alpha || e.webkitCompassHeading;
-            if (alpha !== null && userMarker) {
+            if (alpha && userMarker) {
                 var el = userMarker.getElement();
                 if (el) el.style.transform = el.style.transform.replace(/rotateZ\(.*?\)/, '') + ' rotateZ(' + (360 - alpha) + 'deg)';
             }
         }, true);
-
-        map.on('locationfound', function(e) {
-            if (!userMarker) {
-                userCircle = L.circle(e.latlng, {radius: 10, color: '#007bff', opacity: 0.2}).addTo(map);
-                userMarker = L.marker(e.latlng, {icon: detectorIcon}).addTo(map);
-            } else {
-                userMarker.setLatLng(e.latlng);
-                userCircle.setLatLng(e.latlng);
-                if (lastPos) totalDist += lastPos.distanceTo(e.latlng);
-            }
-            lastPos = e.latlng;
-            updateUI();
-            
-            // Allerta automatica
-            checkAlert(e.latlng);
-        });
-
-        function checkAlert(latlng) {
-            var b = 0.0003; 
-            var url = wmsLazio + "?service=WMS&request=GetFeatureInfo&version=1.1.1&layers=geonode:aree_archeologiche&query_layers=geonode:aree_archeologiche&info_format=application/json&x=50&y=50&width=101&height=101&bbox=" + (latlng.lng-b)+","+(latlng.lat-b)+","+(latlng.lng+b)+","+(latlng.lat+b);
-            fetch(url).then(r => r.json()).then(d => { 
-                document.getElementById('alert-archeo').style.display = (d.features && d.features.length > 0) ? 'block' : 'none';
-            });
-        }
     </script>
 </body>
 </html>
