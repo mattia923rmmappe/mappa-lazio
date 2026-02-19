@@ -3,77 +3,61 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>ArcheoMap - Vie & Scala</title>
-    
+    <title>ArcheoMap Master PRO</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="https://unpkg.com/@geoman-io/leaflet-geoman-free@latest/dist/leaflet-geoman.css" />
-    
     <style>
         body { margin: 0; padding: 0; background: #000; font-family: sans-serif; overflow: hidden; }
         #map { height: 100vh; width: 100%; }
-        
-        /* Box Info in basso */
         #info-box {
-            position: absolute; bottom: 50px; left: 10px; z-index: 1000;
-            background: rgba(0,0,0,0.8); color: #ffff00; padding: 10px;
-            border-radius: 8px; font-size: 13px; border: 2px solid #ffff00;
-            font-family: monospace; pointer-events: none;
+            position: absolute; bottom: 40px; left: 10px; z-index: 1000;
+            background: rgba(0,0,0,0.85); color: #ffff00; padding: 10px;
+            border-radius: 8px; font-size: 11px; border: 2px solid #ffff00; pointer-events: none;
         }
-
-        /* Pannello Controlli a destra */
         .control-panel {
             position: absolute; top: 10px; right: 10px; z-index: 2000;
-            background: white; padding: 5px; border-radius: 8px; border: 2px solid #333;
-            width: 160px;
+            background: white; padding: 5px; border-radius: 8px; border: 2px solid #333; 
+            width: 220px; max-height: 85vh; overflow-y: auto;
         }
         .control-item {
-            padding: 10px; border-bottom: 1px solid #eee; cursor: pointer;
-            font-weight: bold; font-size: 11px; display: flex; justify-content: space-between; align-items: center;
+            padding: 8px; border-bottom: 1px solid #eee; cursor: pointer;
+            font-weight: bold; font-size: 10px; display: flex; justify-content: space-between; align-items: center;
         }
-        
-        /* Tasti specifici */
-        .map-switch { background: #4285F4 !important; color: white !important; margin-bottom: 5px; border-radius: 4px; }
-        .osm-switch { background: #333 !important; color: white !important; margin-bottom: 5px; border-radius: 4px; }
-
+        .map-switch { background: #4285F4 !important; color: white !important; margin-bottom: 5px; border-radius: 4px; justify-content: center; }
+        .section-title { background: #e0e0e0; padding: 4px; font-size: 9px; color: #333; text-transform: uppercase; font-weight: bold; }
         .gps-btn {
-            position: absolute; bottom: 50px; right: 20px; z-index: 1000;
-            background: white; width: 55px; height: 55px; border-radius: 50%;
+            position: absolute; bottom: 40px; right: 20px; z-index: 1000;
+            background: white; width: 60px; height: 60px; border-radius: 50%;
             display: flex; align-items: center; justify-content: center;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.5); font-size: 24px; border: 2px solid #ffff00;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5); font-size: 28px; border: 3px solid #ffff00;
         }
-        
-        /* Stile barra scala (modifica Leaflet standard) */
-        .leaflet-control-scale-line {
-            border: 2px solid #333;
-            background: rgba(255, 255, 255, 0.9);
-            font-size: 14px;
-            font-weight: bold;
-            padding: 2px;
+        .nav-link { 
+            display: block; margin-top: 8px; padding: 10px; background: #4285F4; 
+            color: white; text-align: center; text-decoration: none; border-radius: 5px; font-weight: bold;
         }
     </style>
 </head>
 <body>
 
-    <div id="info-box">
-        MISURA: <span id="val-dist">0</span> m<br>
-        ZOOM: <span id="val-zoom">15</span>
-    </div>
+    <div id="info-box">DIST: <span id="val-dist">0</span>m | ZOOM: <span id="val-zoom">10</span></div>
 
     <div class="control-panel">
-        <div class="control-item map-switch" onclick="switchBaseMap()" id="btn-map-type">🗺️ SATELLITE + VIE</div>
-        <div class="control-item osm-switch" onclick="useOSM()" id="btn-osm">🌍 SOLO STRADE</div>
+        <div class="control-item map-switch" onclick="switchBaseMap()" id="btn-map-type">🗺️ SATELLITE</div>
         
-        <div class="control-item" onclick="toggleLayer('arch')" id="btn-arch" style="color: red;">
-            🏛️ VINCOLI: <span>ON</span>
-        </div>
+        <div class="section-title">Vincoli (WMS Lazio)</div>
+        <div class="control-item" onclick="toggleL('arch')" style="color: red;">🏛️ AREE ARCHEOLOGICHE</div>
+        <div class="control-item" onclick="toggleL('ptpr')" style="color: orange;">🟧 VINCOLI PTPR</div>
         
-        <div class="control-item" onclick="toggleLayer('ptpr')" id="btn-ptpr" style="color: orange;">
-            🟧 PTPR: <span>ON</span>
-        </div>
+        <div class="section-title">Civiltà Antiche</div>
+        <div class="control-item" onclick="toggleL('ancient')" style="color: #8b4513;">🏛️ INSEDIAMENTI (LATINI/ETRUSCHI)</div>
         
-        <div class="control-item" onclick="resetMisura()" style="background: #f0f0f0;">
-            📏 RESET
-        </div>
+        <div class="section-title">Storia Militare</div>
+        <div class="control-item" onclick="toggleL('battles')" style="color: #d32f2f;">⚔️ CAMPI DI BATTAGLIA</div>
+        <div class="control-item" onclick="toggleL('wwii')" style="color: #455a64;">🔘 BUNKER (CON CODICI)</div>
+        <div class="control-item" onclick="toggleL('caesar')" style="color: purple;">➖ LINEA CAESAR</div>
+        
+        <div class="section-title">App</div>
+        <div class="control-item" onclick="location.reload()" style="background: #f8d7da;">🔄 RESET MAPPA</div>
     </div>
     
     <div id="map"></div>
@@ -83,117 +67,93 @@
     <script src="https://unpkg.com/@geoman-io/leaflet-geoman-free@latest/dist/leaflet-geoman.min.js"></script>
 
     <script>
-        var map = L.map('map', { center: [41.9028, 12.4964], zoom: 15, zoomControl: false });
+        var map = L.map('map', { center: [41.75, 12.50], zoom: 10, zoomControl: false });
 
-        // --- 1. BARRA DEI METRI (SCALA) ---
-        // Questa appare in basso a sinistra e cambia coi metri
-        L.control.scale({
-            position: 'bottomleft', 
-            imperial: false, 
-            metric: true, 
-            maxWidth: 200
-        }).addTo(map);
-
-        // Aggiorna indicatore zoom
-        map.on('zoomend', function() {
-            document.getElementById('val-zoom').innerText = map.getZoom();
-        });
-
-        // --- 2. SFONDI ---
-        // Google Hybrid (Satellite + Nomi Vie)
-        var googleHybrid = L.tileLayer('https://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', { maxZoom: 20, subdomains:['mt0','mt1','mt2','mt3'] });
-        // Google Terrain (Rilievi + Nomi)
+        // --- MAPPE BASE ---
+        var googleHybrid = L.tileLayer('https://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', { maxZoom: 20, subdomains:['mt0','mt1','mt2','mt3'] }).addTo(map);
         var googleTerrain = L.tileLayer('https://{s}.google.com/vt/lyrs=p&x={x}&y={y}&z={z}', { maxZoom: 20, subdomains:['mt0','mt1','mt2','mt3'] });
-        // OpenStreetMap (Solo Strade - Migliore per i nomi)
-        var osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 });
-
-        googleHybrid.addTo(map); // Partiamo col satellite ibrido
         var currentBase = "sat";
 
         function switchBaseMap() {
-            if(map.hasLayer(osmLayer)) map.removeLayer(osmLayer); // Rimuove OSM se c'era
-            
-            if (currentBase === "sat") {
-                map.removeLayer(googleHybrid);
-                googleTerrain.addTo(map);
-                currentBase = "terrain";
-                document.getElementById('btn-map-type').innerHTML = "⛰️ TERRENO";
-            } else {
-                map.removeLayer(googleTerrain);
-                googleHybrid.addTo(map);
-                currentBase = "sat";
-                document.getElementById('btn-map-type').innerHTML = "🗺️ SATELLITE";
-            }
+            if (currentBase === "sat") { map.removeLayer(googleHybrid); googleTerrain.addTo(map); currentBase = "terrain"; document.getElementById('btn-map-type').innerText = "⛰️ TERRENO"; }
+            else { map.removeLayer(googleTerrain); googleHybrid.addTo(map); currentBase = "sat"; document.getElementById('btn-map-type').innerText = "🗺️ SATELLITE"; }
         }
 
-        function useOSM() {
-            // Rimuove gli altri sfondi
-            if(map.hasLayer(googleHybrid)) map.removeLayer(googleHybrid);
-            if(map.hasLayer(googleTerrain)) map.removeLayer(googleTerrain);
-            osmLayer.addTo(map);
-            currentBase = "osm";
-            document.getElementById('btn-map-type').innerHTML = "🔙 TORNA A SAT";
-        }
+        function getMapsLink(lat, lng) { return `<a href="https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}" target="_blank" class="nav-link">🧭 NAVIGA QUI</a>`; }
 
-        // --- 3. LAYERS REGIONE (Configurazione Stabile) ---
+        // --- LAYER 1: BUNKER WWII CON CODICI ---
+        var wwiiPoints = L.layerGroup();
+        var bunkerDB = [
+            {loc: [41.6661, 12.7052], name: "Bunker Villa Crocetta", cod: "LNV-01"},
+            {loc: [41.6444, 12.6391], name: "Caposaldo Campoleone", cod: "CPL-05"},
+            {loc: [41.7336, 12.2725], name: "Bunker Ostia Lido", cod: "OST-01"},
+            {loc: [42.2370, 12.5117], name: "Bunker Soratte (Comando)", cod: "SOR-01"},
+            {loc: [41.6025, 12.5644], name: "Fosso Moletta", cod: "ARD-03"},
+            {loc: [41.8316, 12.4719], name: "Bunker EUR (Sotto Palazzo)", cod: "EUR-01"}
+        ];
+        bunkerDB.forEach(b => {
+            L.circleMarker(b.loc, { radius: 8, color: '#000', fillColor: '#808080', fillOpacity: 0.9 })
+             .bindPopup(`<b>${b.name}</b><br>ID: <code>${b.cod}</code><br>${getMapsLink(b.loc[0], b.loc[1])}`).addTo(wwiiPoints);
+        });
+
+        // --- LAYER 2: INSEDIAMENTI ANTICHI ---
+        var ancientSites = L.layerGroup();
+        var settlements = [
+            {loc: [42.0232, 12.3898], name: "Veio (Etruschi)"},
+            {loc: [41.7247, 12.6661], name: "Alba Longa (Latini)"},
+            {loc: [41.6111, 12.5161], name: "Ardea (Rutuli)"},
+            {loc: [41.8900, 12.6450], name: "Gabii (Latini)"},
+            {loc: [41.8402, 12.8924], name: "Praeneste (Palestrina)"}
+        ];
+        settlements.forEach(s => {
+            L.marker(s.loc, { icon: L.divIcon({ className: '', html: '🏛️', iconSize: [20, 20] }) })
+             .bindPopup(`<b>${s.name}</b><br>${getMapsLink(s.loc[0], s.loc[1])}`).addTo(ancientSites);
+        });
+
+        // --- LAYER 3: BATTAGLIE ---
+        var historicalBattles = L.layerGroup();
+        var battles = [
+            {loc: [41.961, 12.493], name: "Saxa Rubra (312 d.C.)"},
+            {loc: [41.710, 12.230], name: "Battaglia di Ostia (849 d.C.)"},
+            {loc: [41.685, 12.778], name: "Battaglia di Velletri (1744)"},
+            {loc: [41.888, 12.463], name: "Gianicolo (1849)"}
+        ];
+        battles.forEach(b => {
+            L.marker(b.loc, { icon: L.divIcon({ className: '', html: '⚔️', iconSize: [22, 22] }) })
+             .bindPopup(`<b>${b.name}</b><br>${getMapsLink(b.loc[0], b.loc[1])}`).addTo(historicalBattles);
+        });
+
+        // --- LINEA CAESAR ---
+        var lineaCaesar = L.polyline([[41.53, 12.58], [41.77, 12.92]], {color: 'purple', weight: 4, dashArray: '10'}).addTo(map);
+
+        // --- WMS REGIONE LAZIO ---
         var wmsUrl = 'https://geoportale.regione.lazio.it/geoserver/wms';
+        var layerArch = L.tileLayer.wms(wmsUrl, { layers: 'geonode:aree_archeologiche', format: 'image/png', transparent: true, opacity: 0.7 });
+        var layerPtpr = L.tileLayer.wms(wmsUrl, { layers: 'geonode:ptpr_tavole_a_beni_paesaggistici', format: 'image/png', transparent: true, opacity: 0.5 });
+        layerArch.addTo(map); layerPtpr.addTo(map); wwiiPoints.addTo(map);
 
-        var layerArch = L.tileLayer.wms(wmsUrl, {
-            layers: 'geonode:aree_archeologiche',
-            format: 'image/png', transparent: true, version: '1.1.1', opacity: 0.7, zIndex: 500
-        }).addTo(map);
-
-        var layerPtpr = L.tileLayer.wms(wmsUrl, {
-            layers: 'geonode:ptpr_tavole_a_beni_paesaggistici',
-            format: 'image/png', transparent: true, version: '1.1.1', opacity: 0.6, zIndex: 400
-        }).addTo(map);
-
-        function toggleLayer(type) {
-            var ly, btn;
-            if(type === 'arch') { ly = layerArch; btn = 'btn-arch'; }
-            if(type === 'ptpr') { ly = layerPtpr; btn = 'btn-ptpr'; }
-
-            if(map.hasLayer(ly)) {
-                map.removeLayer(ly);
-                document.getElementById(btn).style.opacity = "0.4";
-                document.getElementById(btn).querySelector('span').innerText = "OFF";
-            } else {
-                map.addLayer(ly);
-                document.getElementById(btn).style.opacity = "1";
-                document.getElementById(btn).querySelector('span').innerText = "ON";
-            }
+        function toggleL(type) {
+            var ly;
+            if(type==='arch') ly=layerArch; else if(type==='ptpr') ly=layerPtpr;
+            else if(type==='wwii') ly=wwiiPoints; else if(type==='caesar') ly=lineaCaesar;
+            else if(type==='battles') ly=historicalBattles; else if(type==='ancient') ly=ancientSites;
+            if(map.hasLayer(ly)) map.removeLayer(ly); else map.addLayer(ly);
         }
 
-        // --- 4. GOOGLE MAPS LINK ---
-        map.on('click', function(e) {
-            var lat = e.latlng.lat.toFixed(6);
-            var lng = e.latlng.lng.toFixed(6);
-            L.popup().setLatLng(e.latlng).setContent(`<div style="text-align:center;"><a href="https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}" target="_blank" style="background:#4285F4;color:white;padding:10px;border-radius:5px;text-decoration:none;font-weight:bold;">🧭 APRI GOOGLE MAPS</a></div>`).openOn(map);
-        });
-
-        // --- 5. DISEGNO ---
-        map.pm.addControls({ position: 'topleft', drawMarker: false, drawPolyline: true, removalMode: true });
-        map.pm.setPathOptions({ color: '#FFFF00', weight: 6 });
-
+        // --- DISEGNO E GPS ---
+        map.pm.addControls({ position: 'topleft', drawMarker: true, drawPolyline: true, removalMode: true });
         map.on('pm:create', function(e) {
-            if (e.layer instanceof L.Polyline) {
-                var pts = e.layer.getLatLngs();
-                var dist = 0;
-                for(var i=0; i<pts.length-1; i++) dist += pts[i].distanceTo(pts[i+1]);
-                document.getElementById('val-dist').innerText = Math.round(dist);
+            if (e.shape === 'Marker') {
+                var lat = e.layer.getLatLng().lat.toFixed(6);
+                var lng = e.layer.getLatLng().lng.toFixed(6);
+                var nome = prompt("Nome ritrovamento:", "Nuovo Punto");
+                if(nome) e.layer.bindPopup(`<b>${nome}</b><br>${getMapsLink(lat, lng)}`).openPopup();
             }
         });
 
-        function resetMisura() {
-            map.eachLayer(function(l) { if(l instanceof L.Polyline && l !== layerArch && l !== layerPtpr) map.removeLayer(l); });
-            document.getElementById('val-dist').innerText = "0";
-        }
-
-        // --- 6. GPS ---
         function attivaGps() { map.locate({setView:true, maxZoom:17, enableHighAccuracy:true}); }
-        map.on('locationfound', function(e) {
-            L.marker(e.latlng, {icon:L.divIcon({className:'',html:'<div style="width:20px;height:20px;background:yellow;border:3px solid white;border-radius:50%;box-shadow:0 0 5px black;"></div>'})}).addTo(map);
-        });
+        map.on('locationfound', e => { L.circle(e.latlng, {radius: 10, color: 'yellow'}).addTo(map); });
+        map.on('zoomend', () => document.getElementById('val-zoom').innerText = map.getZoom());
     </script>
 </body>
 </html>
