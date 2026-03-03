@@ -1,288 +1,300 @@
 <!DOCTYPE html>
-<html>
+<html lang="it">
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
-<title>notepad</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>ArcheoMap Master PRO - Gustav & Toggle Edition</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/@geoman-io/leaflet-geoman-free@latest/dist/leaflet-geoman.css" />
+    
+    <style>
+        body { margin: 0; padding: 0; background: #000; font-family: sans-serif; overflow: hidden; }
+        #map { height: 100vh; width: 100%; }
+        
+        #info-box {
+            position: absolute; bottom: 30px; left: 10px; z-index: 1000;
+            background: rgba(0,0,0,0.9); color: #ffff00; padding: 10px;
+            border-radius: 8px; font-size: 11px; border: 2px solid #ff0000; pointer-events: none;
+        }
+
+        .menu-toggle-btn {
+            position: absolute; top: 10px; right: 10px; z-index: 3000;
+            background: #333; color: white; padding: 12px 15px;
+            border-radius: 8px; font-weight: bold; font-size: 12px; cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5); border: 2px solid white; text-align: center;
+        }
+
+        .control-panel {
+            position: absolute; top: 60px; right: 10px; z-index: 2000;
+            background: white; padding: 5px; border-radius: 8px; border: 2px solid #333; 
+            width: 250px; max-height: 80vh; overflow-y: auto; display: none; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+        }
+
+        .control-item {
+            padding: 10px; border-bottom: 1px solid #eee; cursor: pointer;
+            font-weight: bold; font-size: 11px; display: flex; justify-content: space-between; align-items: center;
+        }
+
+        .section-title { background: #f0f0f0; padding: 6px; font-size: 10px; color: #444; text-transform: uppercase; font-weight: bold; }
+        
+        select.region-select {
+            width: 100%; padding: 8px; margin-bottom: 5px; font-weight: bold; font-size: 12px;
+            background: #fff3cd; border: 1px solid #ffeeba; border-radius: 4px;
+        }
+
+        .gps-btn {
+            position: absolute; bottom: 30px; right: 20px; z-index: 1000;
+            background: white; width: 60px; height: 60px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5); font-size: 25px; border: 3px solid #ff0000;
+        }
+
+        .nav-link { 
+            display: block; margin-top: 8px; padding: 8px; background: #4285F4; 
+            color: white !important; text-align: center; text-decoration: none; border-radius: 4px; font-size: 11px; font-weight: bold;
+        }
+
+        /* STILI PER I BOTTONI ON/OFF */
+        .status-on { background: #28a745; color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px; }
+        .status-off { background: #6c757d; color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px; }
+        .label-text { flex-grow: 1; }
+    </style>
 </head>
-<style type="text/css">
-ol,ul{
-display:block;
-list-style-type:none;
-margin:3px;
-}
-</style><body>
-<div>&lt;!DOCTYPE html&gt;<br>
-&lt;html lang="it"&gt;<br>
-&lt;head&gt;<br>
-&nbsp;&nbsp;&nbsp; &lt;meta charset="UTF-8"&gt;<br>
-&nbsp;&nbsp;&nbsp; &lt;meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" /&gt;<br>
-&nbsp;&nbsp;&nbsp; &lt;title&gt;ArcheoMap Master PRO - Multi-Regione&lt;/title&gt;<br>
-&nbsp;&nbsp;&nbsp; <br>
-&nbsp;&nbsp;&nbsp; &lt;link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" /&gt;<br>
-&nbsp;&nbsp;&nbsp; &lt;link rel="stylesheet" href="https://unpkg.com/@geoman-io/leaflet-geoman-free@latest/dist/leaflet-geoman.css" /&gt;<br>
-&nbsp;&nbsp;&nbsp; <br>
-&nbsp;&nbsp;&nbsp; &lt;style&gt;<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; body { margin: 0; padding: 0; background: #000; font-family: sans-serif; overflow: hidden; }<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; #map { height: 100vh; width: 100%; }<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; #info-box {<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; position: absolute; bottom: 30px; left: 10px; z-index: 1000;<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; background: rgba(0,0,0,0.9); color: #ffff00; padding: 10px;<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; border-radius: 8px; font-size: 11px; border: 2px solid #ff0000; pointer-events: none;<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; }<br>
-<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; .menu-toggle-btn {<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; position: absolute; top: 10px; right: 10px; z-index: 3000;<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; background: #333; color: white; padding: 12px 15px;<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; border-radius: 8px; font-weight: bold; font-size: 12px; cursor: pointer;<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; box-shadow: 0 4px 10px rgba(0,0,0,0.5); border: 2px solid white; text-align: center;<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; }<br>
-<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; .control-panel {<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; position: absolute; top: 60px; right: 10px; z-index: 2000;<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; background: white; padding: 5px; border-radius: 8px; border: 2px solid #333; <br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; width: 240px; max-height: 80vh; overflow-y: auto; display: none; <br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; box-shadow: 0 4px 15px rgba(0,0,0,0.4);<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; }<br>
-<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; .control-item {<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; padding: 10px; border-bottom: 1px solid #eee; cursor: pointer;<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; font-weight: bold; font-size: 11px; display: flex; justify-content: space-between; align-items: center;<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; }<br>
-<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; .section-title { background: #f0f0f0; padding: 6px; font-size: 10px; color: #444; text-transform: uppercase; font-weight: bold; }<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; select.region-select {<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; width: 100%; padding: 8px; margin-bottom: 5px; font-weight: bold; font-size: 12px;<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; background: #fff3cd; border: 1px solid #ffeeba; border-radius: 4px;<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; }<br>
-<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; .gps-btn {<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; position: absolute; bottom: 30px; right: 20px; z-index: 1000;<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; background: white; width: 60px; height: 60px; border-radius: 50%;<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; display: flex; align-items: center; justify-content: center;<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; box-shadow: 0 4px 10px rgba(0,0,0,0.5); font-size: 25px; border: 3px solid #ff0000;<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; }<br>
-<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; .nav-link { <br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; display: block; margin-top: 8px; padding: 8px; background: #4285F4; <br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; color: white !important; text-align: center; text-decoration: none; border-radius: 4px; font-size: 11px; font-weight: bold;<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; }<br>
-&nbsp;&nbsp;&nbsp; &lt;/style&gt;<br>
-&lt;/head&gt;<br>
-&lt;body&gt;<br>
-<br>
-&nbsp;&nbsp;&nbsp; &lt;div id="info-box"&gt;<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;b&gt;SISTEMA ATTIVO&lt;/b&gt;&lt;br&gt;<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; REGIONE: &lt;span id="val-regione"&gt;LAZIO&lt;/span&gt;&lt;br&gt;<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; RISPETTO: 150m&lt;br&gt;<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ZOOM: &lt;span id="val-zoom"&gt;10&lt;/span&gt;<br>
-&nbsp;&nbsp;&nbsp; &lt;/div&gt;<br>
-<br>
-&nbsp;&nbsp;&nbsp; &lt;div class="menu-toggle-btn" id="btn-menu" onclick="toggleMenu()"&gt;&#9881;&#65039; APRI MENU&lt;/div&gt;<br>
-<br>
-&nbsp;&nbsp;&nbsp; &lt;div class="control-panel" id="main-panel"&gt;<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;div class="control-item" onclick="switchBaseMap()" style="background:#4285F4; color:white; justify-content:center;" id="btn-map-type"&gt;&#128506;&#65039; MAPPA TERRENO&lt;/div&gt;<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;div class="section-title"&gt;Seleziona Regione (WMS)&lt;/div&gt;<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;div style="padding: 5px;"&gt;<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;select class="region-select" id="regione-selector" onchange="cambiaRegione()"&gt;<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;option value="lazio"&gt;Lazio (Attivo)&lt;/option&gt;<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;option value="toscana"&gt;Toscana (Da inserire link WMS)&lt;/option&gt;<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;option value="campania"&gt;Campania (Da inserire link WMS)&lt;/option&gt;<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;/select&gt;<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;/div&gt;<br>
-<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;div class="section-title"&gt;Vincoli (Regione Selezionata)&lt;/div&gt;<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;div class="control-item" onclick="toggleL('arch')" style="color: red;"&gt;&#127963;&#65039; ARCHEOLOGIA (WMS)&lt;/div&gt;<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;div class="control-item" onclick="toggleL('ptpr')" style="color: orange;"&gt;&#128999; PTPR (VINCOLI)&lt;/div&gt;<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;div class="control-item" onclick="toggleL('respect')" style="color: #ff0000;"&gt;&#11093; CERCHI RISPETTO 150m&lt;/div&gt;<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;div class="section-title"&gt;Database Storico&lt;/div&gt;<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;div class="control-item" onclick="toggleL('ancient')" style="color: #8b4513;"&gt;&#127963;&#65039; CITT&#192; ANTICHE&lt;/div&gt;<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;div class="control-item" onclick="toggleL('battles')" style="color: #d32f2f;"&gt;&#9876;&#65039; CAMPI BATTAGLIA&lt;/div&gt;<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;div class="section-title"&gt;Militaria WWII&lt;/div&gt;<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;div class="control-item" onclick="toggleL('wwii')" style="color: #455a64;"&gt;&#128280; BUNKER / CODICI&lt;/div&gt;<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;div class="control-item" onclick="toggleL('caesar')" style="color: purple;"&gt;&#10134; LINEA CAESAR&lt;/div&gt;<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;div class="section-title"&gt;Azioni&lt;/div&gt;<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;div class="control-item" onclick="location.reload()" style="background: #eee; justify-content: center;"&gt;&#128260; REFRESH APP&lt;/div&gt;<br>
-&nbsp;&nbsp;&nbsp; &lt;/div&gt;<br>
-&nbsp;&nbsp;&nbsp; <br>
-&nbsp;&nbsp;&nbsp; &lt;div id="map"&gt;&lt;/div&gt;<br>
-&nbsp;&nbsp;&nbsp; &lt;div class="gps-btn" onclick="attivaGps()"&gt;&#128205;&lt;/div&gt;<br>
-<br>
-&nbsp;&nbsp;&nbsp; &lt;script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"&gt;&lt;/script&gt;<br>
-&nbsp;&nbsp;&nbsp; &lt;script src="https://unpkg.com/@geoman-io/leaflet-geoman-free@latest/dist/leaflet-geoman.min.js"&gt;&lt;/script&gt;<br>
-<br>
-&nbsp;&nbsp;&nbsp; &lt;script&gt;<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; var map = L.map('map', { center: [41.70, 12.55], zoom: 10, zoomControl: false });<br>
-<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; var googleHybrid = L.tileLayer('https://{s}.google.com/vt/lyrs=y&amp;x={x}&amp;y={y}&amp;z={z}', { maxZoom: 20, subdomains:['mt0','mt1','mt2','mt3'] }).addTo(map);<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; var googleTerrain = L.tileLayer('https://{s}.google.com/vt/lyrs=p&amp;x={x}&amp;y={y}&amp;z={z}', { maxZoom: 20, subdomains:['mt0','mt1','mt2','mt3'] });<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; var currentBase = "sat";<br>
-<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; function switchBaseMap() {<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if (currentBase === "sat") { <br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; map.removeLayer(googleHybrid); googleTerrain.addTo(map); <br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; currentBase = "terrain"; document.getElementById('btn-map-type').innerHTML = "&#128506;&#65039; MAPPA SATELLITE";<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; } else { <br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; map.removeLayer(googleTerrain); googleHybrid.addTo(map); <br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; currentBase = "sat"; document.getElementById('btn-map-type').innerHTML = "&#128506;&#65039; MAPPA TERRENO";<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; }<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; }<br>
-<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; function toggleMenu() {<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; var panel = document.getElementById('main-panel');<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; var btn = document.getElementById('btn-menu');<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if (panel.style.display === 'none' || panel.style.display === '') {<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; panel.style.display = 'block'; btn.innerHTML = '&#10060; CHIUDI MENU';<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; } else {<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; panel.style.display = 'none'; btn.innerHTML = '&#9881;&#65039; APRI MENU';<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; }<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; }<br>
-<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; function getMapsLink(lat, lng) {<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; return `&lt;a href="https://www.google.com/maps/dir/?api=1&amp;destination=${lat},${lng}" target="_blank" class="nav-link"&gt;&#128663; NAVIGA QUI&lt;/a&gt;`;<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; }<br>
-<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; var respectLayer = L.layerGroup().addTo(map);<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; function addRespectCircle(lat, lng) {<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; L.circle([lat, lng], { radius: 150, color: '#ff0000', fillColor: '#ff0000', fillOpacity: 0.15, dashArray: '5, 5', interactive: false }).addTo(respectLayer);<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; }<br>
-<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; // --- DATABASE STORICO E MILITARE ---<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; var wwiiPoints = L.layerGroup().addTo(map);<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; var bunkerDB = [<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; {loc: [41.7336, 12.2725], name: "Bunker Ostia Lido", cod: "OST-01"},<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; {loc: [41.7450, 12.2610], name: "Difesa Idroscalo", cod: "OST-02"},<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; {loc: [41.7120, 12.3250], name: "Bunker Castel Porziano", cod: "CPZ-01"},<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; {loc: [41.6444, 12.6391], name: "Caposaldo Campoleone", cod: "CPL-05"},<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; {loc: [41.6520, 12.6210], name: "Bunker Via della Cogna", cod: "CPL-08"},<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; {loc: [41.5950, 12.6700], name: "Bunker Aprilia (The Factory)", cod: "APR-01"},<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; {loc: [41.6661, 12.7052], name: "Bunker Villa Crocetta", cod: "LNV-01"},<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; {loc: [41.6780, 12.6930], name: "Artiglieria Lanuvio", cod: "LNV-02"},<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; {loc: [41.6700, 12.7150], name: "Postazione Tobruk", cod: "LNV-T1"},<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; {loc: [41.6850, 12.7780], name: "Caposaldo Velletri", cod: "VEL-01"},<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; {loc: [41.6934, 12.8125], name: "Colle S. Angela", cod: "VEL-12"},<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; {loc: [41.7725, 12.9231], name: "Bunker Artena", cod: "ART-01"},<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; {loc: [42.2370, 12.5117], name: "Bunker Soratte", cod: "SOR-01"},<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; {loc: [41.8320, 12.4680], name: "Bunker EUR", cod: "EUR-01"},<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; {loc: [41.9161, 12.4533], name: "Bunker Monte Mario", cod: "ROM-MM"},<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; {loc: [41.6025, 12.5644], name: "Fosso Moletta", cod: "ARD-03"}<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ];<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; bunkerDB.forEach(b =&gt; {<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; L.circleMarker(b.loc, { radius: 8, color: '#000', fillColor: '#808080', fillOpacity: 1, weight: 2 })<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; .bindPopup(`&lt;b&gt;${b.name}&lt;/b&gt;&lt;br&gt;CODICE: &lt;code&gt;${b.cod}&lt;/code&gt;&lt;br&gt;${getMapsLink(b.loc[0], b.loc[1])}`).addTo(wwiiPoints);<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; addRespectCircle(b.loc[0], b.loc[1]);<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; });<br>
-<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; var lineaCaesar = L.polyline([[41.53, 12.58], [41.59, 12.65], [41.65, 12.68], [41.68, 12.78], [41.72, 12.85], [41.77, 12.92]], {color: 'purple', weight: 4, dashArray: '10'}).addTo(map);<br>
-<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; var ancientSites = L.layerGroup().addTo(map);<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; var settlements = [<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; {loc: [42.0232, 12.3898], name: "Veio"}, {loc: [42.2275, 11.7891], name: "Tarquinia"},<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; {loc: [41.9344, 12.0469], name: "Caere"}, {loc: [41.7247, 12.6661], name: "Alba Longa"},<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; {loc: [41.8900, 12.6450], name: "Gabii"}, {loc: [41.6111, 12.5161], name: "Ardea"},<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; {loc: [41.6500, 12.4833], name: "Lavinium"}, {loc: [41.8402, 12.8924], name: "Praeneste"}<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ];<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; settlements.forEach(s =&gt; {<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; L.marker(s.loc, { icon: L.divIcon({ html: '&#127963;&#65039;', iconSize: [20, 20], className:'' }) }).bindPopup(`&lt;b&gt;${s.name}&lt;/b&gt;&lt;br&gt;${getMapsLink(s.loc[0], s.loc[1])}`).addTo(ancientSites);<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; addRespectCircle(s.loc[0], s.loc[1]);<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; });<br>
-<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; var historicalBattles = L.layerGroup().addTo(map);<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; var battles = [{loc: [41.961, 12.493], name: "Saxa Rubra"}, {loc: [41.722, 12.674], name: "Lago Regillo"}, {loc: [41.685, 12.778], name: "Batt. Velletri"}];<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; battles.forEach(b =&gt; { L.marker(b.loc, { icon: L.divIcon({ html: '&#9876;&#65039;', iconSize: [20, 20], className:'' }) }).bindPopup(`&lt;b&gt;${b.name}&lt;/b&gt;&lt;br&gt;${getMapsLink(b.loc[0], b.loc[1])}`).addTo(historicalBattles); });<br>
-<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; // --- SISTEMA WMS REGIONALE DINAMICO ---<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; var wmsDatabase = {<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 'lazio': {<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; url: 'https://geoportale.regione.lazio.it/geoserver/wms',<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; arch: 'geonode:aree_archeologiche',<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ptpr: 'geonode:ptpr_tavole_a_beni_paesaggistici'<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; },<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 'toscana': {<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; url: '', // INSERIRE URL WMS TOSCANA QUI<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; arch: '', // INSERIRE NOME LAYER ARCHEOLOGIA TOSCANA<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ptpr: ''&nbsp; // INSERIRE NOME LAYER PTPR TOSCANA<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; },<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 'campania': {<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; url: '', // INSERIRE URL WMS CAMPANIA QUI<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; arch: '', <br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ptpr: ''&nbsp; <br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; }<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; };<br>
-<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; var layerArch = null;<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; var layerPtpr = null;<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; var isArchActive = true; // Partono accesi<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; var isPtprActive = true; // Partono accesi<br>
-<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; function caricaWMS(regioneKey) {<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; // Rimuove i vecchi layer se esistono<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if (layerArch &amp;&amp; map.hasLayer(layerArch)) map.removeLayer(layerArch);<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if (layerPtpr &amp;&amp; map.hasLayer(layerPtpr)) map.removeLayer(layerPtpr);<br>
-<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; var dati = wmsDatabase[regioneKey];<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; // Se la regione ha i link inseriti, crea i layer<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if(dati.url !== '') {<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; layerArch = L.tileLayer.wms(dati.url, { layers: dati.arch, format: 'image/png', transparent: true, opacity: 0.6 });<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; layerPtpr = L.tileLayer.wms(dati.url, { layers: dati.ptpr, format: 'image/png', transparent: true, opacity: 0.4 });<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if(isArchActive) layerArch.addTo(map);<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if(isPtprActive) layerPtpr.addTo(map);<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; } else {<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; alert("Attenzione: I link WMS per " + regioneKey.toUpperCase() + " non sono ancora stati inseriti nel codice.");<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; }<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; }<br>
-<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; function cambiaRegione() {<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; var scelt = document.getElementById("regione-selector").value;<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; document.getElementById("val-regione").innerText = scelt.toUpperCase();<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; caricaWMS(scelt);<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; }<br>
-<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; // Inizializza il Lazio all'avvio<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; caricaWMS('lazio');<br>
-<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; function toggleL(type) {<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if(type==='arch') {<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if(map.hasLayer(layerArch)) { map.removeLayer(layerArch); isArchActive = false; }<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; else { map.addLayer(layerArch); isArchActive = true; }<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; } else if(type==='ptpr') {<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if(map.hasLayer(layerPtpr)) { map.removeLayer(layerPtpr); isPtprActive = false; }<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; else { map.addLayer(layerPtpr); isPtprActive = true; }<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; }<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; else {<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; var ly;<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if(type==='wwii') ly=wwiiPoints; else if(type==='ancient') ly=ancientSites;<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; else if(type==='battles') ly=historicalBattles; else if(type==='caesar') ly=lineaCaesar;<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; else if(type==='respect') ly=respectLayer;<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if(map.hasLayer(ly)) map.removeLayer(ly); else map.addLayer(ly);<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; }<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; }<br>
-<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; // --- GPS E GEOMAN ---<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; map.pm.addControls({ position: 'topleft', drawMarker: true, drawPolyline: false, drawPolygon: false, removalMode: true });<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; map.on('pm:create', function(e) {<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if (e.shape === 'Marker') {<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; var lat = e.layer.getLatLng().lat;<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; var lng = e.layer.getLatLng().lng;<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; addRespectCircle(lat, lng); <br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; var nome = prompt("Nome nuovo ritrovamento:");<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if(nome) e.layer.bindPopup(`&lt;b&gt;${nome}&lt;/b&gt;&lt;br&gt;${getMapsLink(lat, lng)}`).openPopup();<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; }<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; });<br>
-<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; function attivaGps() { map.locate({setView:true, maxZoom:17, enableHighAccuracy:true}); }<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; map.on('locationfound', e =&gt; { L.circle(e.latlng, {radius: 10, color: '#ffff00', fillColor: '#0000ff', fillOpacity: 0.5}).addTo(map); });<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; map.on('zoomend', () =&gt; document.getElementById('val-zoom').innerText = map.getZoom());<br>
-&nbsp;&nbsp;&nbsp; &lt;/script&gt;<br>
-&lt;/body&gt;<br>
-&lt;/html&gt;</div>
+<body>
+
+    <div id="info-box">
+        <b>SISTEMA ATTIVO</b><br>
+        REGIONE: <span id="val-regione">LAZIO</span><br>
+        RISPETTO: 150m<br>
+        ZOOM: <span id="val-zoom">10</span>
+    </div>
+
+    <div class="menu-toggle-btn" id="btn-menu" onclick="toggleMenu()">⚙️ APRI MENU</div>
+
+    <div class="control-panel" id="main-panel">
+        <div class="control-item" onclick="switchBaseMap()" style="background:#4285F4; color:white; justify-content:center;" id="btn-map-type">🗺️ MAPPA TERRENO</div>
+        
+        <div class="section-title">Seleziona Regione (WMS)</div>
+        <div style="padding: 5px;">
+            <select class="region-select" id="regione-selector" onchange="cambiaRegione()">
+                <option value="lazio">Lazio (Attivo)</option>
+                <option value="toscana">Toscana (Da inserire)</option>
+                <option value="campania">Campania (Da inserire)</option>
+            </select>
+        </div>
+
+        <div class="section-title">Vincoli (Regione Selezionata)</div>
+        <div class="control-item" onclick="toggleL('arch', 'st-arch')"><span class="label-text" style="color: red;">🏛️ ARCHEOLOGIA</span> <span id="st-arch" class="status-on">ON</span></div>
+        <div class="control-item" onclick="toggleL('ptpr', 'st-ptpr')"><span class="label-text" style="color: orange;">🟧 PTPR (VINCOLI)</span> <span id="st-ptpr" class="status-on">ON</span></div>
+        <div class="control-item" onclick="toggleL('respect', 'st-respect')"><span class="label-text" style="color: #ff0000;">⭕ CERCHI RISPETTO</span> <span id="st-respect" class="status-on">ON</span></div>
+        
+        <div class="section-title">Database Storico</div>
+        <div class="control-item" onclick="toggleL('ancient', 'st-ancient')"><span class="label-text" style="color: #8b4513;">🏛️ CITTÀ ANTICHE</span> <span id="st-ancient" class="status-on">ON</span></div>
+        <div class="control-item" onclick="toggleL('battles', 'st-battles')"><span class="label-text" style="color: #d32f2f;">⚔️ CAMPI BATTAGLIA</span> <span id="st-battles" class="status-on">ON</span></div>
+        
+        <div class="section-title">Militaria WWII</div>
+        <div class="control-item" onclick="toggleL('wwii', 'st-wwii')"><span class="label-text" style="color: #455a64;">🔘 BUNKER / CODICI</span> <span id="st-wwii" class="status-on">ON</span></div>
+        <div class="control-item" onclick="toggleL('caesar', 'st-caesar')"><span class="label-text" style="color: purple;">➖ LINEA CAESAR</span> <span id="st-caesar" class="status-on">ON</span></div>
+        <div class="control-item" onclick="toggleL('gustav', 'st-gustav')"><span class="label-text" style="color: #cc0000;">🪖 LINEA GUSTAV</span> <span id="st-gustav" class="status-on">ON</span></div>
+        
+        <div class="section-title">Azioni</div>
+        <div class="control-item" onclick="location.reload()" style="background: #eee; justify-content: center;">🔄 REFRESH APP</div>
+    </div>
+    
+    <div id="map"></div>
+    <div class="gps-btn" onclick="attivaGps()">📍</div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/@geoman-io/leaflet-geoman-free@latest/dist/leaflet-geoman.min.js"></script>
+
+    <script>
+        var map = L.map('map', { center: [41.70, 12.55], zoom: 10, zoomControl: false });
+
+        var googleHybrid = L.tileLayer('https://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', { maxZoom: 20, subdomains:['mt0','mt1','mt2','mt3'] }).addTo(map);
+        var googleTerrain = L.tileLayer('https://{s}.google.com/vt/lyrs=p&x={x}&y={y}&z={z}', { maxZoom: 20, subdomains:['mt0','mt1','mt2','mt3'] });
+        var currentBase = "sat";
+
+        function switchBaseMap() {
+            if (currentBase === "sat") { 
+                map.removeLayer(googleHybrid); googleTerrain.addTo(map); 
+                currentBase = "terrain"; document.getElementById('btn-map-type').innerHTML = "🗺️ MAPPA SATELLITE";
+            } else { 
+                map.removeLayer(googleTerrain); googleHybrid.addTo(map); 
+                currentBase = "sat"; document.getElementById('btn-map-type').innerHTML = "🗺️ MAPPA TERRENO";
+            }
+        }
+
+        function toggleMenu() {
+            var panel = document.getElementById('main-panel');
+            var btn = document.getElementById('btn-menu');
+            if (panel.style.display === 'none' || panel.style.display === '') {
+                panel.style.display = 'block'; btn.innerHTML = '❌ CHIUDI MENU';
+            } else {
+                panel.style.display = 'none'; btn.innerHTML = '⚙️ APRI MENU';
+            }
+        }
+
+        function getMapsLink(lat, lng) {
+            return `<a href="https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}" target="_blank" class="nav-link">🚗 NAVIGA QUI</a>`;
+        }
+
+        var respectLayer = L.layerGroup().addTo(map);
+        function addRespectCircle(lat, lng) {
+            L.circle([lat, lng], { radius: 150, color: '#ff0000', fillColor: '#ff0000', fillOpacity: 0.15, dashArray: '5, 5', interactive: false }).addTo(respectLayer);
+        }
+
+        // --- DATABASE STORICO E MILITARE ---
+        var wwiiPoints = L.layerGroup().addTo(map);
+        var bunkerDB = [
+            // Linea Caesar & Litorale
+            {loc: [41.7336, 12.2725], name: "Bunker Ostia Lido", cod: "OST-01"},
+            {loc: [41.7450, 12.2610], name: "Difesa Idroscalo", cod: "OST-02"},
+            {loc: [41.7120, 12.3250], name: "Bunker Castel Porziano", cod: "CPZ-01"},
+            {loc: [41.6444, 12.6391], name: "Caposaldo Campoleone", cod: "CPL-05"},
+            {loc: [41.6520, 12.6210], name: "Bunker Via della Cogna", cod: "CPL-08"},
+            {loc: [41.5950, 12.6700], name: "Bunker Aprilia (The Factory)", cod: "APR-01"},
+            {loc: [41.6661, 12.7052], name: "Bunker Villa Crocetta", cod: "LNV-01"},
+            {loc: [41.6780, 12.6930], name: "Artiglieria Lanuvio", cod: "LNV-02"},
+            {loc: [41.6700, 12.7150], name: "Postazione Tobruk", cod: "LNV-T1"},
+            {loc: [41.6850, 12.7780], name: "Caposaldo Velletri", cod: "VEL-01"},
+            {loc: [41.6934, 12.8125], name: "Colle S. Angela", cod: "VEL-12"},
+            {loc: [41.7725, 12.9231], name: "Bunker Artena", cod: "ART-01"},
+            {loc: [42.2370, 12.5117], name: "Bunker Soratte", cod: "SOR-01"},
+            {loc: [41.8320, 12.4680], name: "Bunker EUR", cod: "EUR-01"},
+            {loc: [41.9161, 12.4533], name: "Bunker Monte Mario", cod: "ROM-MM"},
+            {loc: [41.6025, 12.5644], name: "Fosso Moletta", cod: "ARD-03"},
+            
+            // Nuovi Punti Linea Gustav
+            {loc: [41.4920, 13.8240], name: "Caposaldo Cassino (Gustav)", cod: "CAS-01"},
+            {loc: [41.2630, 13.7510], name: "Caposaldo Minturno (Gustav)", cod: "MIN-01"},
+            {loc: [42.3490, 14.4020], name: "Difesa Ortona (Gustav)", cod: "ORT-01"}
+        ];
+        bunkerDB.forEach(b => {
+            L.circleMarker(b.loc, { radius: 8, color: '#000', fillColor: '#808080', fillOpacity: 1, weight: 2 })
+             .bindPopup(`<b>${b.name}</b><br>CODICE: <code>${b.cod}</code><br>${getMapsLink(b.loc[0], b.loc[1])}`).addTo(wwiiPoints);
+            addRespectCircle(b.loc[0], b.loc[1]);
+        });
+
+        // --- LINEE DIFENSIVE ---
+        // Linea Caesar
+        var lineaCaesar = L.polyline([[41.53, 12.58], [41.59, 12.65], [41.65, 12.68], [41.68, 12.78], [41.72, 12.85], [41.77, 12.92]], {color: 'purple', weight: 4, dashArray: '10'}).addTo(map);
+        // Linea Gustav (dal Tirreno all'Adriatico)
+        var lineaGustav = L.polyline([[41.26, 13.75], [41.49, 13.83], [41.78, 14.10], [42.35, 14.40]], {color: '#cc0000', weight: 4, dashArray: '10'}).addTo(map);
+
+        var ancientSites = L.layerGroup().addTo(map);
+        var settlements = [
+            {loc: [42.0232, 12.3898], name: "Veio"}, {loc: [42.2275, 11.7891], name: "Tarquinia"},
+            {loc: [41.9344, 12.0469], name: "Caere"}, {loc: [41.7247, 12.6661], name: "Alba Longa"},
+            {loc: [41.8900, 12.6450], name: "Gabii"}, {loc: [41.6111, 12.5161], name: "Ardea"},
+            {loc: [41.6500, 12.4833], name: "Lavinium"}, {loc: [41.8402, 12.8924], name: "Praeneste"}
+        ];
+        settlements.forEach(s => {
+            L.marker(s.loc, { icon: L.divIcon({ html: '🏛️', iconSize: [20, 20], className:'' }) }).bindPopup(`<b>${s.name}</b><br>${getMapsLink(s.loc[0], s.loc[1])}`).addTo(ancientSites);
+            addRespectCircle(s.loc[0], s.loc[1]);
+        });
+
+        var historicalBattles = L.layerGroup().addTo(map);
+        var battles = [{loc: [41.961, 12.493], name: "Saxa Rubra"}, {loc: [41.722, 12.674], name: "Lago Regillo"}, {loc: [41.685, 12.778], name: "Batt. Velletri"}, {loc: [41.492, 13.824], name: "Battaglia di Cassino"}];
+        battles.forEach(b => { L.marker(b.loc, { icon: L.divIcon({ html: '⚔️', iconSize: [20, 20], className:'' }) }).bindPopup(`<b>${b.name}</b><br>${getMapsLink(b.loc[0], b.loc[1])}`).addTo(historicalBattles); });
+
+        // --- SISTEMA WMS REGIONALE ---
+        var wmsDatabase = {
+            'lazio': { url: 'https://geoportale.regione.lazio.it/geoserver/wms', arch: 'geonode:aree_archeologiche', ptpr: 'geonode:ptpr_tavole_a_beni_paesaggistici' },
+            'toscana': { url: '', arch: '', ptpr: '' },
+            'campania': { url: '', arch: '', ptpr: '' }
+        };
+
+        var layerArch = null;
+        var layerPtpr = null;
+        var isArchActive = true; 
+        var isPtprActive = true; 
+
+        function caricaWMS(regioneKey) {
+            if (layerArch && map.hasLayer(layerArch)) map.removeLayer(layerArch);
+            if (layerPtpr && map.hasLayer(layerPtpr)) map.removeLayer(layerPtpr);
+
+            var dati = wmsDatabase[regioneKey];
+            
+            if(dati.url !== '') {
+                layerArch = L.tileLayer.wms(dati.url, { layers: dati.arch, format: 'image/png', transparent: true, opacity: 0.6 });
+                layerPtpr = L.tileLayer.wms(dati.url, { layers: dati.ptpr, format: 'image/png', transparent: true, opacity: 0.4 });
+                
+                if(isArchActive) layerArch.addTo(map);
+                if(isPtprActive) layerPtpr.addTo(map);
+            }
+        }
+
+        function cambiaRegione() {
+            var scelt = document.getElementById("regione-selector").value;
+            document.getElementById("val-regione").innerText = scelt.toUpperCase();
+            caricaWMS(scelt);
+        }
+
+        caricaWMS('lazio');
+
+        // --- FUNZIONE TOGGLE CON AGGIORNAMENTO ON/OFF ---
+        function toggleL(type, spanId) {
+            var span = document.getElementById(spanId);
+            var ly;
+            var isActive = false;
+
+            if(type === 'arch') {
+                if(map.hasLayer(layerArch)) { map.removeLayer(layerArch); isArchActive = false; }
+                else { map.addLayer(layerArch); isArchActive = true; isActive = true; }
+                updateSpan(span, isActive);
+                return;
+            } 
+            if(type === 'ptpr') {
+                if(map.hasLayer(layerPtpr)) { map.removeLayer(layerPtpr); isPtprActive = false; }
+                else { map.addLayer(layerPtpr); isPtprActive = true; isActive = true; }
+                updateSpan(span, isActive);
+                return;
+            }
+
+            // Altri layer
+            if(type === 'wwii') ly = wwiiPoints;
+            else if(type === 'ancient') ly = ancientSites;
+            else if(type === 'battles') ly = historicalBattles;
+            else if(type === 'caesar') ly = lineaCaesar;
+            else if(type === 'gustav') ly = lineaGustav;
+            else if(type === 'respect') ly = respectLayer;
+
+            if(map.hasLayer(ly)) {
+                map.removeLayer(ly);
+                updateSpan(span, false);
+            } else {
+                map.addLayer(ly);
+                updateSpan(span, true);
+            }
+        }
+
+        function updateSpan(spanElement, isNowActive) {
+            if(isNowActive) {
+                spanElement.innerText = "ON";
+                spanElement.className = "status-on";
+            } else {
+                spanElement.innerText = "OFF";
+                spanElement.className = "status-off";
+            }
+        }
+
+        // --- GPS E GEOMAN ---
+        map.pm.addControls({ position: 'topleft', drawMarker: true, drawPolyline: false, drawPolygon: false, removalMode: true });
+        map.on('pm:create', function(e) {
+            if (e.shape === 'Marker') {
+                var lat = e.layer.getLatLng().lat;
+                var lng = e.layer.getLatLng().lng;
+                addRespectCircle(lat, lng); 
+                var nome = prompt("Nome nuovo ritrovamento:");
+                if(nome) e.layer.bindPopup(`<b>${nome}</b><br>${getMapsLink(lat, lng)}`).openPopup();
+            }
+        });
+
+        function attivaGps() { map.locate({setView:true, maxZoom:17, enableHighAccuracy:true}); }
+        map.on('locationfound', e => { L.circle(e.latlng, {radius: 10, color: '#ffff00', fillColor: '#0000ff', fillOpacity: 0.5}).addTo(map); });
+        map.on('zoomend', () => document.getElementById('val-zoom').innerText = map.getZoom());
+    </script>
 </body>
 </html>
