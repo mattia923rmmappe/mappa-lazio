@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>ArcheoMap Master PRO - Rotation Edition</title>
+    <title>ArcheoMap Italia ULTIMATE - Save & Rotate</title>
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="https://unpkg.com/@geoman-io/leaflet-geoman-free@latest/dist/leaflet-geoman.css" />
@@ -62,9 +62,10 @@
 <body>
 
     <div id="info-box">
-        <b>ARCHEOMAP ROTATE PRO</b><br>
+        <b>ARCHEOMAP ULTIMATE</b><br>
         REGIONE: <span id="val-regione">NAZIONALE</span><br>
-        BUSSOLA: <span id="val-heading">0</span>°
+        BUSSOLA: <span id="val-heading">0</span>°<br>
+        PUNTI SALVATI: <span id="val-saved">0</span>
     </div>
 
     <div class="menu-toggle-btn" id="btn-menu" onclick="toggleMenu()">⚙️ MENU E REGIONI</div>
@@ -72,7 +73,7 @@
     <div class="control-panel" id="main-panel">
         <div class="control-item" onclick="switchBaseMap()" style="background:#4285F4; color:white; justify-content:center;" id="btn-map-type">🗺️ MAPPA TERRENO</div>
         
-        <div class="section-title">1. CAMBIA REGIONE / DATABASE</div>
+        <div class="section-title">1. REGIONI (PTPR)</div>
         <div style="padding: 5px;">
             <select class="region-select" id="regione-selector" onchange="cambiaRegione()">
                 <option value="nazionale">Italia (Ministero - PCN)</option>
@@ -83,7 +84,7 @@
             </select>
         </div>
 
-        <div class="section-title">2. VINCOLI ATTIVI</div>
+        <div class="section-title">2. VINCOLI ON/OFF</div>
         <div class="control-item" onclick="toggleL('arch', 'st-arch')">🏛️ ARCHEOLOGIA <span id="st-arch" class="status-on">ON</span></div>
         <div class="control-item" onclick="toggleL('ptpr', 'st-ptpr')">🟧 PTPR / PAESAGGIO <span id="st-ptpr" class="status-on">ON</span></div>
         <div class="control-item" onclick="toggleL('respect', 'st-respect')">⭕ BUFFER 150m <span id="st-respect" class="status-on">ON</span></div>
@@ -95,9 +96,9 @@
 
         <div class="section-title">4. STORIA ANTICA</div>
         <div class="control-item" onclick="toggleL('ancient', 'st-ancient')">🏛️ CITTÀ ANTICHE <span id="st-ancient" class="status-on">ON</span></div>
-        <div class="control-item" onclick="toggleL('battles', 'st-battles')">⚔️ BATTAGLIE <span id="st-battles" class="status-on">ON</span></div>
 
-        <div class="section-title">Azioni</div>
+        <div class="section-title">GESTIONE DATI</div>
+        <div class="control-item" onclick="svuotaSalvataggi()" style="background: #ffcccc; color: red; justify-content: center;">🗑️ CANCELLA TUTTI I TUOI PUNTI</div>
         <div class="control-item" onclick="map.setBearing(0)" style="background: #fff3cd; justify-content: center;">🧭 RIPRISTINA NORD</div>
         <div class="control-item" onclick="location.reload()" style="background: #eee; justify-content: center;">🔄 REFRESH APP</div>
     </div>
@@ -115,12 +116,12 @@
             center: [41.70, 12.55], 
             zoom: 10, 
             zoomControl: false,
-            rotate: true, // Abilita rotazione
-            touchRotate: true, // Rotazione con due dita
+            rotate: true, 
+            touchRotate: true,
             bearing: 0
         });
 
-        // --- MAPPE BASE GOOGLE ---
+        // --- MAPPE BASE ---
         var googleHybrid = L.tileLayer('https://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', { maxZoom: 20, subdomains:['mt0','mt1','mt2','mt3'] }).addTo(map);
         var googleTerrain = L.tileLayer('https://{s}.google.com/vt/lyrs=p&x={x}&y={y}&z={z}', { maxZoom: 20, subdomains:['mt0','mt1','mt2','mt3'] });
         var currentBase = "sat";
@@ -135,7 +136,7 @@
             }
         }
 
-        // --- SISTEMA WMS DINAMICO ---
+        // --- SISTEMA WMS ---
         var wmsConfig = {
             'nazionale': { url: 'http://wms.pcn.minambiente.it/ogc?map=/ms_ogc/WMS_v1.3/Vettoriali/Vincoli_Archeologici.map', arch: 'VincoliArcheologici', ptpr: 'Siti_Rete_Natura_2000' },
             'lazio': { url: 'https://geoportale.regione.lazio.it/geoserver/wms', arch: 'geonode:aree_archeologiche', ptpr: 'geonode:ptpr_tavole_a_beni_paesaggistici' },
@@ -164,25 +165,64 @@
             caricaRegione(val);
         }
 
-        // --- DATABASE MILITARE & STORICO ---
+        // --- LOGICA DI SALVATAGGIO (PERSISTENZA) ---
+        var userMarkersLayer = L.layerGroup().addTo(map);
         var respectLayer = L.layerGroup().addTo(map);
-        var wwiiPoints = L.layerGroup().addTo(map);
-        var ancientSites = L.layerGroup().addTo(map);
-        var historicalBattles = L.layerGroup().addTo(map);
-
-        function getMapsLink(lat, lng) { return `<a href="https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}" target="_blank" class="nav-link">🚗 NAVIGA QUI</a>`; }
 
         function addRespectCircle(lat, lng) {
             L.circle([lat, lng], { radius: 150, color: 'red', fillOpacity: 0.1, dashArray: '5,5', interactive: false }).addTo(respectLayer);
         }
 
-        // Database Bunker
+        function getMapsLink(lat, lng) { return `<a href="https://www.google.com/maps?q=${lat},${lng}" target="_blank" class="nav-link">🚗 NAVIGA QUI</a>`; }
+
+        // Funzione per salvare tutti i punti in LocalStorage
+        function saveToStorage() {
+            let data = [];
+            userMarkersLayer.eachLayer(layer => {
+                if (layer instanceof L.Marker || layer instanceof L.CircleMarker) {
+                    data.push({
+                        lat: layer.getLatLng().lat,
+                        lng: layer.getLatLng().lng,
+                        name: layer.options.title || "Punto senza nome"
+                    });
+                }
+            });
+            localStorage.setItem('archeo_points', JSON.stringify(data));
+            document.getElementById('val-saved').innerText = data.length;
+        }
+
+        // Funzione per caricare i punti all'avvio
+        function loadFromStorage() {
+            let stored = localStorage.getItem('archeo_points');
+            if (stored) {
+                let data = JSON.parse(stored);
+                data.forEach(p => {
+                    let m = L.circleMarker([p.lat, p.lng], { radius: 10, color: 'blue', fillColor: 'cyan', fillOpacity: 0.8, title: p.name })
+                        .bindPopup(`<b>${p.name}</b><br>${getMapsLink(p.lat, p.lng)}`)
+                        .addTo(userMarkersLayer);
+                    addRespectCircle(p.lat, p.lng);
+                });
+                document.getElementById('val-saved').innerText = data.length;
+            }
+        }
+
+        function svuotaSalvataggi() {
+            if(confirm("Vuoi davvero cancellare TUTTI i tuoi punti salvati?")) {
+                localStorage.removeItem('archeo_points');
+                userMarkersLayer.clearLayers();
+                respectLayer.clearLayers();
+                document.getElementById('val-saved').innerText = "0";
+                // Ricarica i cerchi dei bunker fissi
+                bunkerDB.forEach(b => addRespectCircle(b.loc[0], b.loc[1]));
+            }
+        }
+
+        // --- DATABASE MILITARE FISSO ---
+        var wwiiPoints = L.layerGroup().addTo(map);
         var bunkerDB = [
             {loc: [41.7336, 12.2725], name: "Bunker Ostia", cod: "OST-01"},
             {loc: [41.4920, 13.8240], name: "Cassino - Gustav", cod: "CAS-01"},
-            {loc: [41.6850, 12.7780], name: "Velletri - Caesar", cod: "VEL-01"},
-            {loc: [42.2370, 12.5117], name: "Bunker Soratte", cod: "SOR-01"},
-            {loc: [41.2630, 13.7510], name: "Minturno - Gustav", cod: "MIN-01"}
+            {loc: [41.6850, 12.7780], name: "Velletri - Caesar", cod: "VEL-01"}
         ];
         bunkerDB.forEach(b => {
             L.circleMarker(b.loc, {radius: 8, color: '#000', fillColor: '#808080', fillOpacity: 1, weight: 2})
@@ -190,18 +230,30 @@
             addRespectCircle(b.loc[0], b.loc[1]);
         });
 
-        // Linee Difensive
         var lineaGustav = L.polyline([[41.26, 13.75], [41.49, 13.83], [42.35, 14.40]], {color: '#cc0000', weight: 4, dashArray: '10'}).addTo(map);
         var lineaCaesar = L.polyline([[41.53, 12.58], [41.77, 12.92]], {color: 'purple', weight: 4, dashArray: '10'}).addTo(map);
 
-        // Città Antiche
-        var settlements = [{loc: [42.0232, 12.3898], name: "Veio"}, {loc: [42.2275, 11.7891], name: "Tarquinia"}, {loc: [41.9344, 12.0469], name: "Cerveteri"}];
-        settlements.forEach(s => {
-            L.marker(s.loc, { icon: L.divIcon({ html: '🏛️', iconSize: [20, 20], className:'' }) }).bindPopup(s.name).addTo(ancientSites);
-            addRespectCircle(s.loc[0], s.loc[1]);
+        // --- GEOMAN (CREAZIONE PUNTI) ---
+        map.pm.addControls({ position: 'topleft', drawMarker: true, drawPolyline: false, drawPolygon: false, removalMode: true });
+        map.on('pm:create', function(e) {
+            if (e.shape === 'Marker') {
+                var lat = e.layer.getLatLng().lat;
+                var lng = e.layer.getLatLng().lng;
+                var nome = prompt("Nome del ritrovamento:");
+                if(!nome) nome = "Punto salvato";
+                
+                // Rimuoviamo il marker temporaneo di Geoman e ne mettiamo uno dei nostri salvabile
+                map.removeLayer(e.layer);
+                L.circleMarker([lat, lng], { radius: 10, color: 'blue', fillColor: 'cyan', fillOpacity: 0.8, title: nome })
+                    .bindPopup(`<b>${nome}</b><br>${getMapsLink(lat, lng)}`)
+                    .addTo(userMarkersLayer);
+                
+                addRespectCircle(lat, lng); 
+                saveToStorage(); // Salva subito
+            }
         });
 
-        // --- LOGICA MENU & TOGGLE ---
+        // --- INTERFACCIA ---
         function toggleMenu() {
             var p = document.getElementById('main-panel');
             p.style.display = (p.style.display === 'none' || p.style.display === '') ? 'block' : 'none';
@@ -210,51 +262,25 @@
         function toggleL(type, spanId) {
             var span = document.getElementById(spanId);
             var ly;
-            if(type === 'arch') { 
-                isArchOn = !isArchOn; if(isArchOn) layerArch.addTo(map); else map.removeLayer(layerArch);
-                updateSt(span, isArchOn); return;
-            }
-            if(type === 'ptpr') { 
-                isPtprOn = !isPtprOn; if(isPtprOn) layerPtpr.addTo(map); else map.removeLayer(layerPtpr);
-                updateSt(span, isPtprOn); return;
-            }
+            if(type === 'arch') { isArchOn = !isArchOn; if(isArchOn) layerArch.addTo(map); else map.removeLayer(layerArch); updateSt(span, isArchOn); return; }
+            if(type === 'ptpr') { isPtprOn = !isPtprOn; if(isPtprOn) layerPtpr.addTo(map); else map.removeLayer(layerPtpr); updateSt(span, isPtprOn); return; }
             if(type === 'wwii') ly = wwiiPoints;
             else if(type === 'gustav') ly = lineaGustav;
             else if(type === 'caesar') ly = lineaCaesar;
-            else if(type === 'ancient') ly = ancientSites;
             else if(type === 'respect') ly = respectLayer;
-            else if(type === 'battles') ly = historicalBattles;
 
             if(map.hasLayer(ly)) { map.removeLayer(ly); updateSt(span, false); }
             else { map.addLayer(ly); updateSt(span, true); }
         }
 
-        function updateSt(el, on) {
-            el.innerText = on ? "ON" : "OFF";
-            el.className = on ? "status-on" : "status-off";
-        }
+        function updateSt(el, on) { el.innerText = on ? "ON" : "OFF"; el.className = on ? "status-on" : "status-off"; }
 
-        // --- GPS & ROTAZIONE INFO ---
         function attivaGps() { map.locate({setView:true, maxZoom:17}); }
         map.on('locationfound', e => { L.circle(e.latlng, 10, {color: 'yellow'}).addTo(map); });
-        
-        // Aggiorna l'indicazione dei gradi nel box info quando ruoti la mappa
-        map.on('rotate', function() {
-            document.getElementById('val-heading').innerText = Math.round(map.getBearing());
-        });
+        map.on('rotate', () => document.getElementById('val-heading').innerText = Math.round(map.getBearing()));
 
-        // --- GEOMAN (Aggiunta punti) ---
-        map.pm.addControls({ position: 'topleft', drawMarker: true, drawPolyline: false, drawPolygon: false, removalMode: true });
-        map.on('pm:create', function(e) {
-            if (e.shape === 'Marker') {
-                var lat = e.layer.getLatLng().lat;
-                var lng = e.layer.getLatLng().lng;
-                addRespectCircle(lat, lng); 
-                var nome = prompt("Nome nuovo ritrovamento:");
-                if(nome) e.layer.bindPopup(`<b>${nome}</b><br>${getMapsLink(lat, lng)}`).openPopup();
-            }
-        });
-
+        // Avvio
+        loadFromStorage();
         caricaRegione('nazionale');
     </script>
 </body>
